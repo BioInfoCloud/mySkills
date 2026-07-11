@@ -1,0 +1,5 @@
+interface:
+  display_name: "Bilingual Research Review Generator"
+  short_description: "Create evidence-grounded bilingual (CN/EN) review documents with verified citations, formatted Word output, and literature tracking spreadsheet."
+  default_prompt: "Use $review-generator to create a bilingual review with verified citations for the following topic."
+  recommended_for: ["literature reviews", "research surveys", "综述写作", "comprehensive overview papers"]

@@ -1,0 +1,28 @@
+# Routing configuration for review-generator.
+# Uses progressive disclosure: core files always loaded, domain/language fragments loaded on demand.
+
+axes:
+  domain:
+    detect: "Classify from the requested topic and its evidence base."
+    values:
+      biomedical: "static/fragments/domain/biomedical.md"
+      cs_ai: "static/fragments/domain/cs_ai.md"
+      cross: "static/fragments/domain/cross.md"
+      general: "static/fragments/domain/general.md"
+  language:
+    detect: "Always generate both Chinese and English documents."
+    values:
+      zh: "static/fragments/language/zh.md"
+      en: "static/fragments/language/en.md"
+
+always_load:
+  - "static/core/workflow.md"
+  - "static/core/principles.md"
+  - "static/core/output-contract.md"
+
+references:
+  on_demand:
+    citation_formats: "references/citation-formats.md"
+    database_guide: "references/database-guide.md"
+    review_structure: "references/review-structure.md"
+    writing_quality: "references/writing-quality.md"

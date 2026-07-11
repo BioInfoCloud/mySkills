@@ -1,0 +1,26 @@
+{
+  "skill_name": "review-generator",
+  "evals": [
+    {
+      "id": 1,
+      "name": "biomedical-review-mrna-vaccine",
+      "prompt": "帮我写一篇关于mRNA癌症疫苗的中英文综述，重点包括：mRNA疫苗的技术平台（如脂质纳米颗粒递送系统、mRNA修饰技术）、针对的癌症靶点（新生抗原、肿瘤相关抗原）、临床研究进展（已获批和处于临床试验阶段的疫苗），以及当前面临的挑战（免疫原性、肿瘤异质性、递送效率）。希望综述比较全面，约1万字中文/6000英文词，引用50篇左右文献。",
+      "expected_output": "Bilingual review with verified citations on mRNA cancer vaccines, covering technology platforms, targets, clinical progress, and challenges. Output includes review_CN.md, review_EN.md, review_CN.docx, review_EN.docx, and literature_search.xlsx.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "cs-ai-review-foundation-models",
+      "prompt": "Write a comprehensive English review on the applications of large language models in drug discovery. Cover: (1) molecular representation learning (SMILES, SELFIES, graph-based), (2) protein language models (ESM, ProtGPT2), (3) molecule generation and optimization, (4) retrosynthesis prediction, (5) challenges and future directions. Target ~7000 words with 60+ references. Use Vancouver citation format.",
+      "expected_output": "English review with verified citations on LLMs in drug discovery. Output includes review_EN.md, review_EN.docx, and literature_search.xlsx.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "cross-disciplinary-review-ai-radiomics",
+      "prompt": "Write a Chinese review on the application of deep learning in radiomics for cancer diagnosis. Cover: (1) radiomics pipeline (image acquisition, segmentation, feature extraction), (2) deep learning methods (CNN, Transformer, self-supervised learning), (3) clinical applications (lung, breast, brain cancer), (4) challenges (reproducibility, data standardization, interpretability). Include a PRISMA-like flow diagram. ~10000 Chinese characters, 40 references.",
+      "expected_output": "Chinese review on deep learning radiomics with verified citations and a flow diagram. Output includes review_CN.md, review_CN.docx, literature_search.xlsx, and figure files.",
+      "files": []
+    }
+  ]
+}
