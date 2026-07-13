@@ -2,7 +2,7 @@
 """
 Generate formatted Word (.docx) documents from markdown review files.
 
-Supports both Chinese (楷体 or 宋体) and English (Times New Roman) formatting.
+Supports both Chinese (宋体 or 楷体) and English (Times New Roman) formatting.
 Produces review_CN.docx and review_EN.docx with proper academic styling.
 
 Usage:
@@ -16,14 +16,14 @@ Requirements:
 
 import argparse
 import json
-import os
+
 import re
 import sys
 from pathlib import Path
 
 try:
     from docx import Document
-    from docx.shared import Pt, Cm, Inches, RGBColor
+    from docx.shared import Pt, Cm
     from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.oxml.ns import qn, nsdecls
@@ -38,8 +38,8 @@ except ImportError:
 # ---------------------------------------------------------------------------
 FONT_CONFIG = {
     "zh": {
-        "body_font": "楷体",
-        "heading_font": "黑体",
+        "body_font": "宋体",
+        "heading_font": "宋体",
         "body_font_ascii": "Times New Roman",
         "title_size": Pt(16),
         "h1_size": Pt(14),
@@ -61,6 +61,8 @@ FONT_CONFIG = {
         "ref_size": Pt(10),
         "abstract_size": Pt(10),
     },
+    # East Asian fallback font used for CJK characters in any document
+    "east_asian_fallback": "宋体",
 }
 
 
@@ -133,8 +135,31 @@ def parse_markdown(md_text):
             i += 1
             continue
 
+        # Code block (skip entire block)
+        if stripped.startswith("```"):
+            i += 1
+            while i < len(lines) and not lines[i].strip().startswith("```"):
+                i += 1
+            i += 1  # skip closing ```
+            continue
+
+        # Blockquote (strip > prefix, treat as paragraph)
+        if stripped.startswith(">"):
+            stripped = stripped[1:].strip()
+
+        # Ordered / unordered list items (strip marker, treat as paragraph)
+        if re.match(r"^[\d]+\.\s", stripped) or stripped.startswith("- ") or stripped.startswith("* "):
+            stripped = re.sub(r"^[\d]+\.\s|^[-*]\s", "", stripped).strip()
+
         # Horizontal rule (skip)
         if stripped in ("---", "***", "___"):
+            i += 1
+            continue
+
+        # Image-only line — capture for docx embedding
+        img_match = re.match(r'^!\[(.*?)\]\((.*?)\)\s*$', stripped)
+        if img_match:
+            blocks.append(("image", {"src": img_match.group(2), "alt": img_match.group(1)}))
             i += 1
             continue
 
@@ -180,25 +205,34 @@ def _set_run_font(run, western_font, eastasia_font, size):
 
 
 def _run_font_config(config, is_heading=False):
-    """Return (western_font, eastasia_font) tuple based on language config."""
-    if config["body_font"] == "宋体" or config["body_font"] == "楷体":
-        western = config["body_font_ascii"]  # Times New Roman
-        eastasia = config["heading_font"] if is_heading else config["body_font"]
+    """Return (western_font, eastasia_font) tuple based on language config.
+    
+    Western font = always the config's ASCII font (Times New Roman).
+    East Asian font = the config's body/heading font (宋体 for ZH, TNR for EN),
+    but ALWAYS falls back to 宋体 if the config font is purely Western (TNR).
+    This ensures CJK characters render properly in ALL documents,
+    while English text always uses Times New Roman.
+    """
+    western = config.get("body_font_ascii", "Times New Roman")
+    candidate_eastasian = config["heading_font"] if is_heading else config["body_font"]
+    # If the candidate is purely Western (TNR, Arial, etc.), use the fallback Chinese font
+    west_only = {"Times New Roman", "Arial", "Calibri", "Cambria"}
+    if candidate_eastasian in west_only:
+        eastasia = config.get("east_asian_fallback", "宋体")
     else:
-        western = config["body_font"]  # Times New Roman
-        eastasia = config["body_font"]  # Times New Roman
+        eastasia = candidate_eastasian
     return western, eastasia
 
 
 # ---------------------------------------------------------------------------
 # Inline formatting (bold, italic, citations)
 # ---------------------------------------------------------------------------
-def add_runs_with_formatting(paragraph, text, lang_config, is_reference=False):
+def add_runs_with_formatting(paragraph, text, lang_config, is_small_text=False):
     """Add text to paragraph, parsing **bold**, *italic*, and [N] citations."""
     pattern = r'(\*\*[^*]+\*\*|\*[^*]+\*|\[[\d\-,\s]+\])'
     parts = re.split(pattern, text)
 
-    font_size = lang_config["ref_size"] if is_reference else lang_config["body_size"]
+    font_size = lang_config["ref_size"] if is_small_text else lang_config["body_size"]
     western_font, eastasia_font = _run_font_config(lang_config)
 
     for part in parts:
@@ -212,7 +246,6 @@ def add_runs_with_formatting(paragraph, text, lang_config, is_reference=False):
             run.italic = True
         elif re.match(r'^\[[\d\-,\s]+\]$', part):
             run = paragraph.add_run(part)
-            run.font.superscript = True
         else:
             run = paragraph.add_run(part)
 
@@ -220,10 +253,18 @@ def add_runs_with_formatting(paragraph, text, lang_config, is_reference=False):
 
 
 # ---------------------------------------------------------------------------
-# Table rendering
+# Table rendering — academic three-line table (三线表)
 # ---------------------------------------------------------------------------
 def add_table_to_doc(doc, table_data, lang_config):
-    """Add a formatted table to the document."""
+    """Add a three-line table (三线表) to the document.
+    
+    Three-line table format:
+      - Top border: thick (1.5pt)
+      - Header-bottom border: thick (1.5pt)  
+      - Table-bottom border: thick (1.5pt)
+      - No vertical borders, no interior horizontal borders between data rows
+      - Header row: bold text, no shading (pure academic style)
+    """
     if not table_data or len(table_data) < 1:
         return
 
@@ -231,20 +272,21 @@ def add_table_to_doc(doc, table_data, lang_config):
     table = doc.add_table(rows=len(table_data), cols=num_cols)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-    # Apply table style
+    # Remove all default cell borders (set to none first, then add only the three lines)
     tbl = table._tbl
     tbl_pr = tbl.tblPr if tbl.tblPr is not None else parse_xml(
         f'<w:tblPr {nsdecls("w")}></w:tblPr>'
     )
 
-    # Add borders
+    # Three-line table borders: top thick, header-bottom thick, bottom thick.
+    # No vertical borders, no interior horizontal borders.
     borders_xml = f'''<w:tblBorders {nsdecls("w")}>
-        <w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>
-        <w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+        <w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+        <w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>
+        <w:insideH w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+        <w:insideV w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+        <w:left w:val="none" w:sz="0" w:space="0" w:color="auto"/>
+        <w:right w:val="none" w:sz="0" w:space="0" w:color="auto"/>
     </w:tblBorders>'''
     tbl_pr.append(parse_xml(borders_xml))
 
@@ -258,17 +300,18 @@ def add_table_to_doc(doc, table_data, lang_config):
             para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             add_runs_with_formatting(para, cell_text, lang_config)
 
-            # Header row bold
+            # Header row: bold text, add bottom border to create the middle thick line
             if row_idx == 0:
                 for run in para.runs:
                     run.bold = True
-                # Shading for header
-                shading = parse_xml(
-                    f'<w:shd {nsdecls("w")} w:fill="2F5496" w:val="clear"/>'
+                # Add thick bottom border on header row cells (the middle line of the three-line table)
+                tc_pr = cell._tc.tcPr
+                tc_borders = parse_xml(
+                    f'<w:tcBorders {nsdecls("w")}>'
+                    f'<w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>'
+                    f'</w:tcBorders>'
                 )
-                cell._tc.tcPr.append(shading)
-                for run in para.runs:
-                    run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+                tc_pr.append(tc_borders)
 
     # Spacing after table
     doc.add_paragraph()
@@ -277,8 +320,12 @@ def add_table_to_doc(doc, table_data, lang_config):
 # ---------------------------------------------------------------------------
 # Document generation
 # ---------------------------------------------------------------------------
-def generate_docx(blocks, output_path, lang="zh"):
-    """Generate a formatted .docx file from parsed blocks."""
+def generate_docx(blocks, output_path, lang="zh", input_dir=None):
+    """Generate a formatted .docx file from parsed blocks.
+    
+    Args:
+        input_dir: Base directory for resolving relative image paths.
+    """
     config = FONT_CONFIG[lang]
     doc = Document()
 
@@ -353,14 +400,42 @@ def generate_docx(blocks, output_path, lang="zh"):
             para.paragraph_format.space_before = Pt(6)
             para.paragraph_format.space_after = Pt(6)
 
+        elif block_type == "image":
+            # Embed image if file exists
+            img_src = content["src"]
+            img_alt = content["alt"]
+            img_path = Path(img_src)
+            if not img_path.is_absolute() and input_dir:
+                img_path = Path(input_dir) / img_src
+            if img_path.is_file():
+                try:
+                    para = doc.add_paragraph()
+                    para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    run = para.add_run()
+                    run.add_picture(str(img_path), width=Cm(14))
+                    if img_alt:
+                        cap = doc.add_paragraph()
+                        cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                        cap.paragraph_format.space_before = Pt(4)
+                        cap.paragraph_format.space_after = Pt(12)
+                        r = cap.add_run(img_alt)
+                        r.italic = True
+                        cfg = FONT_CONFIG.get(lang, FONT_CONFIG["en"])
+                        western = cfg.get("body_font_ascii", "Times New Roman")
+                        _set_run_font(r, western, "宋体", Pt(10))
+                except Exception as e:
+                    para = doc.add_paragraph()
+                    para.add_run(f"[Image: {img_src}]").italic = True
+            else:
+                para = doc.add_paragraph()
+                para.add_run(f"[Image not found: {img_src}]").italic = True
+
         elif block_type == "table":
             add_table_to_doc(doc, content, config)
 
         elif block_type == "paragraph":
-            # Skip image-only lines; strip inline images
-            if re.match(r'^!\[.*\]\(.*\)$', content.strip()):
-                continue
-            content = re.sub(r'!\[.*?\]\(.*?\)', '[Figure]', content)
+            # Strip inline images — replace with alt text
+            content = re.sub(r'!\[(.*?)\]\(.*?\)', r'\1', content)
 
             # Determine if this is abstract or keyword section
             is_abstract = False
@@ -385,9 +460,9 @@ def generate_docx(blocks, output_path, lang="zh"):
                 # Hanging indent for references
                 para.paragraph_format.left_indent = Cm(0.74)
                 para.paragraph_format.first_line_indent = Cm(-0.74)
-                add_runs_with_formatting(para, content, config, is_reference=True)
+                add_runs_with_formatting(para, content, config, is_small_text=True)
             elif is_abstract:
-                add_runs_with_formatting(para, content, config, is_reference=True)
+                add_runs_with_formatting(para, content, config, is_small_text=True)
             else:
                 add_runs_with_formatting(para, content, config)
 
@@ -450,14 +525,15 @@ def check_citation_integrity(md_text):
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
-def process_file(input_path, output_path, lang, strict_citations=False, cn_font="楷体"):
+def process_file(input_path, output_path, lang, strict_citations=False, cn_font="宋体"):
     """Process a single markdown file into a docx file."""
     with open(input_path, "r", encoding="utf-8") as f:
         md_text = f.read()
 
-    # Override font for Chinese
+    # Override font for Chinese (body and headings use the same font)
     if lang == "zh" and cn_font in ("宋体", "楷体"):
         FONT_CONFIG["zh"]["body_font"] = cn_font
+        FONT_CONFIG["zh"]["heading_font"] = cn_font
 
     # Check citation integrity
     integrity = check_citation_integrity(md_text)
@@ -470,10 +546,13 @@ def process_file(input_path, output_path, lang, strict_citations=False, cn_font=
         print(f"    In-text citations: {len(integrity['in_text_citations'])}")
         print(f"    Listed references: {len(integrity['listed_refs'])}")
         if strict_citations:
-            raise ValueError("Citation integrity validation failed")
+            print("\n  ERROR: Citation integrity validation failed (see warnings above).")
+            print("  Fix the citation mismatches or run without --strict-citations to proceed anyway.")
+            sys.exit(1)
 
+    input_dir = str(Path(input_path).parent)
     blocks = parse_markdown(md_text)
-    generate_docx(blocks, output_path, lang)
+    generate_docx(blocks, output_path, lang, input_dir=input_dir)
     print(f"  Generated: {output_path}")
     print(f"  Blocks: {len(blocks)}")
     return output_path
@@ -533,6 +612,49 @@ def create_final_xlsx(md_path, selected_papers_path, output_path):
     return output_path
 
 
+def create_selected_xlsx(selected_papers_path, output_path):
+    """Create selected_papers.xlsx from selected_papers.json (all papers)."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    records = json.loads(Path(selected_papers_path).read_text(encoding="utf-8"))
+    if not records:
+        print(f"  WARNING: No records in {selected_papers_path}; cannot create selected_papers.xlsx.")
+        return None
+
+    headers = ["Ref#", "Title", "Authors", "Journal", "Year", "Source DB",
+               "DOI", "PMID", "URL", "Cited By", "Open Access", "Abstract"]
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Selected Papers"
+    fill = PatternFill("solid", fgColor="2F5496")
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(1, col, header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = fill
+        cell.alignment = Alignment(horizontal="center")
+    for row_idx, record in enumerate(records, 1):
+        values = [
+            record.get("ref_no", row_idx), record.get("title", ""),
+            record.get("authors", ""), record.get("journal", ""),
+            record.get("year", ""), record.get("source", ""),
+            record.get("doi", ""), record.get("pmid", ""),
+            record.get("url", ""), record.get("cited_by", 0),
+            record.get("open_access", "Unknown"), record.get("abstract", ""),
+        ]
+        for col, value in enumerate(values, 1):
+            ws.cell(row_idx + 1, col, value)
+    col_widths = {"A": 7, "B": 60, "C": 35, "D": 28, "E": 9, "F": 18,
+                  "G": 30, "H": 12, "I": 45, "J": 12, "K": 14, "L": 70}
+    for col_letter, width in col_widths.items():
+        ws.column_dimensions[col_letter].width = width
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+    wb.save(output_path)
+    print(f"  Selected xlsx ({len(records)} papers): {output_path}")
+    return output_path
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate formatted Word documents from markdown review files."
@@ -540,14 +662,14 @@ def main():
     parser.add_argument("--input", help="Input markdown file path")
     parser.add_argument("--output", help="Output docx file path")
     parser.add_argument("--lang", choices=["zh", "en"], default="zh",
-                        help="Language (zh=Chinese/楷体+Times New Roman, en=English/Times New Roman)")
-    parser.add_argument("--cn-font", choices=["宋体", "楷体"], default="楷体",
-                        help="Chinese body font (default: 楷体, alternative: 宋体)")
+                        help="Language (zh=Chinese/宋体+Times New Roman, en=English/Times New Roman)")
+    parser.add_argument("--cn-font", choices=["宋体", "楷体"], default="宋体",
+                        help="Chinese font for body and headings (default: 宋体, alternative: 楷体)")
     parser.add_argument("--input-dir", help="Process both CN and EN files in directory")
     parser.add_argument("--strict-citations", action="store_true",
                         help="Refuse to create Word files when citation validation fails")
     parser.add_argument("--final-xlsx", action="store_true",
-                        help="Create literature_search.xlsx with only cited refs (requires selected_papers.json in input-dir)")
+                        help="Create literature_search.xlsx + selected_papers.xlsx (requires selected_papers.json in input-dir)")
     args = parser.parse_args()
 
     if args.input_dir:
@@ -578,8 +700,10 @@ def main():
             en_md_exists = en_md.exists()
             selected_path = input_dir / "selected_papers.json"
             if selected_path.exists() and en_md_exists:
-                xlsx_path = input_dir / "literature_search.xlsx"
-                create_final_xlsx(str(en_md), str(selected_path), str(xlsx_path))
+                lit_xlsx = input_dir / "literature_search.xlsx"
+                create_final_xlsx(str(en_md), str(selected_path), str(lit_xlsx))
+                sel_xlsx = input_dir / "selected_papers.xlsx"
+                create_selected_xlsx(str(selected_path), str(sel_xlsx))
             elif en_md_exists:
                 print("  WARNING: --final-xlsx requires selected_papers.json in input-dir")
             else:
@@ -594,7 +718,8 @@ def main():
             sys.exit(1)
 
     elif args.input and args.output:
-        process_file(args.input, args.output, args.lang, args.strict_citations, args.cn_font if args.lang == "zh" else "楷体")
+        cn_font = args.cn_font if args.lang == "zh" else args.cn_font
+        process_file(args.input, args.output, args.lang, args.strict_citations, cn_font)
 
     else:
         parser.print_help()

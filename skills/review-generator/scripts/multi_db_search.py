@@ -1,22 +1,29 @@
 #!/usr/bin/env python3
 """
 Multi-database literature search, deduplication, and Excel export.
-Supports: PubMed, arXiv, Semantic Scholar, Crossref, OpenAlex, DBLP, IEEE Xplore.
+Supports: PubMed, Europe PMC, arXiv (CS/AI only), Semantic Scholar, Crossref,
+          OpenAlex, DBLP, IEEE Xplore, Dimensions.
+
+Preprint servers (bioRxiv, medRxiv) are NOT searched by default. The --domain
+setting controls which databases are used; see DOMAIN_DATABASES below.
 
 Usage:
-    python multi_db_search.py --topic "mRNA cancer vaccine" --output_dir ./search_results
-                              --max_per_db 80 --years 2021-2025
-                              --domain biomedical
+    python multi_db_search.py --topic "mRNA cancer vaccine" --output-dir ./search_results
+                               --max_per_db 80 --years 2021-2025
+                               --domain biomedical
 
-    python multi_db_search.py --topic "transformer architecture NLP" --output_dir ./search_results
+    python multi_db_search.py --topic "transformer architecture NLP" --output-dir ./search_results
                               --domain cs_ai
 
-    # IEEE Xplore requires API_KEY:
-    #   set IEEE_API_KEY=your_key  (or pass --ieee_api_key)
+    # API keys via environment variables:
+    #   NCBI_API_KEY     (PubMed, for higher rate limits)
+    #   IEEE_API_KEY     (IEEE Xplore)
+    #   DIMENSIONS_API_KEY (Dimensions.ai)
 """
 
 import argparse, json, os, re, sys, time, xml.etree.ElementTree as ET
-from datetime import datetime
+
+from pathlib import Path
 from typing import Any
 
 try:
@@ -34,6 +41,10 @@ except ImportError:
 
 
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY", "")
+SEMANTIC_SCHOLAR_API_KEY = os.environ.get("SEMANTIC_SCHOLAR_API_KEY", "")
+
+USER_AGENT = "ReviewGenerator/1.0 (https://github.com/anomalyco/review-generator)"
+
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -191,8 +202,11 @@ def search_semantic_scholar(query: str, max_results: int = 50, years: str = "") 
         y = years.split("-")
         if len(y) == 2:
             params["year"] = f"{y[0]}-{y[1]}"
+    headers = {"x-api-key": SEMANTIC_SCHOLAR_API_KEY} if SEMANTIC_SCHOLAR_API_KEY else {}
+    if not SEMANTIC_SCHOLAR_API_KEY:
+        time.sleep(3.0)
     try:
-        r = requests.get(base, params=params, timeout=30)
+        r = requests.get(base, params=params, headers=headers, timeout=30)
         data = r.json()
         results = data.get("data", [])
         if not results:
@@ -237,7 +251,7 @@ def search_crossref(query: str, max_results: int = 50, years: str = "") -> list[
     if years:
         params["filter"] = f"from-pub-date:{years[:4]},until-pub-date:{years[5:]}"
     try:
-        r = requests.get(base, params=params, timeout=30, headers={"User-Agent": "ReviewGenerator/1.0 (mailto:review@example.com)"})
+        r = requests.get(base, params=params, timeout=30, headers={"User-Agent": USER_AGENT})
         data = r.json()
         items = data.get("message", {}).get("items", [])
         return _parse_crossref(items)
@@ -293,7 +307,7 @@ def search_openalex(query: str, max_results: int = 50, years: str = "") -> list[
     time.sleep(0.11)
     try:
         r = requests.get(base, params=params, timeout=30,
-                         headers={"User-Agent": "ReviewGenerator/1.0 (mailto:review@example.com)"})
+                         headers={"User-Agent": USER_AGENT})
         data = r.json()
         return _parse_openalex(data.get("results", []))
     except Exception as e:
@@ -346,7 +360,115 @@ def _parse_openalex(results: list) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# DBLP (NEW) — Computer science bibliography, covers all major CS conferences
+# Europe PMC (NEW) — Life sciences, 41M+ abstracts, 8M+ full-text OA articles
+# ---------------------------------------------------------------------------
+def search_europe_pmc(query: str, max_results: int = 50, years: str = "") -> list[dict]:
+    base = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
+    params: dict[str, Any] = {
+        "query": query,
+        "resultType": "core",
+        "pageSize": min(max_results, 100),
+        "format": "json",
+        "sort": "CITED desc",
+    }
+    if years and "-" in years:
+        params["query"] = f"({query}) AND (FIRST_PDATE:[{years[:4]}-01-01 TO {years[5:]}-12-31])"
+    try:
+        r = requests.get(base, params=params, timeout=30)
+        data = r.json()
+        results = data.get("resultList", {}).get("result", [])
+        return _parse_europe_pmc(results)
+    except Exception as e:
+        print(f"  Europe PMC search error: {e}")
+        return []
+
+
+def _parse_europe_pmc(results: list) -> list[dict]:
+    articles = []
+    for p in results:
+        d: dict[str, Any] = {"source": "Europe PMC"}
+        d["title"] = p.get("title", "") or ""
+        d["abstract"] = p.get("abstractText", "") or ""
+        d["doi"] = p.get("doi", "") or ""
+        d["pmid"] = p.get("pmid", "") or p.get("source", "") or ""
+        d["pmcid"] = p.get("pmcid", "") or ""
+        d["year"] = p.get("pubYear", "") or ""
+        author_str = p.get("authorString", "") or ""
+        if author_str:
+            authors = author_str.split(", ")
+            d["authors"] = ", ".join(authors[:10])
+        else:
+            d["authors"] = "Unknown"
+        d["journal"] = p.get("journalTitle", "") or p.get("bookOrReportDetails", {}).get("publisher", "") or ""
+        d["url"] = f"https://doi.org/{d['doi']}" if d["doi"] else p.get("fullTextUrlList", {}).get("fullTextUrl", [{}])[0].get("url", "") if p.get("fullTextUrlList") else ""
+        d["key"] = d["doi"] or d["pmid"] or d["title"]
+        d["cited_by"] = p.get("citedByCount", 0) or 0
+        d["has_fulltext"] = bool(p.get("hasPDF", "") == "Y" or d["pmcid"] or p.get("isOpenAccess", "") == "Y")
+        d["oa_url"] = p.get("fullTextUrlList", {}).get("fullTextUrl", [{}])[0].get("url", "") if p.get("fullTextUrlList") else ""
+        articles.append(d)
+    return articles
+
+
+# ---------------------------------------------------------------------------
+# Dimensions.ai (NEW) — 140M+ publications, grants, patents, clinical trials
+# Requires DIMENSIONS_API_KEY environment variable
+# ---------------------------------------------------------------------------
+def search_dimensions(query: str, max_results: int = 50, years: str = "",
+                      api_key: str = "") -> list[dict]:
+    if not api_key:
+        api_key = os.environ.get("DIMENSIONS_API_KEY", "")
+    if not api_key:
+        print("  Dimensions: No API key found. Set DIMENSIONS_API_KEY env var. Skipping.")
+        return []
+
+    base = "https://app.dimensions.ai/api/dsl/v2"
+    dsl_query = f'search publications for "{query}" return publications[id+doi+title+authors+year+journal+times_cited+abstract] sort by times_cited limit {min(max_results, 50)}'
+    if years and "-" in years:
+        dsl_query = f'search publications for "{query}" where year in [{years[:4]}:{years[5:]}] return publications[id+doi+title+authors+year+journal+times_cited+abstract] sort by times_cited limit {min(max_results, 50)}'
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    try:
+        r = requests.post(base, json={"query": dsl_query}, headers=headers, timeout=30)
+        data = r.json()
+        publications = data.get("publications", [])
+        return _parse_dimensions(publications)
+    except Exception as e:
+        print(f"  Dimensions search error: {e}")
+        return []
+
+
+def _parse_dimensions(publications: list) -> list[dict]:
+    articles = []
+    for p in publications:
+        d: dict[str, Any] = {"source": "Dimensions"}
+        d["title"] = p.get("title", "") or ""
+        d["abstract"] = p.get("abstract", "") or ""
+        d["doi"] = p.get("doi", "") or ""
+        d["pmid"] = ""
+        d["year"] = str(p.get("year", "")) or ""
+        authors = p.get("authors", []) or []
+        alist = []
+        for a in authors[:10]:
+            fn = a.get("first_name", "")
+            ln = a.get("last_name", "")
+            if ln:
+                alist.append(f"{ln} {fn[0]}." if fn else ln)
+        d["authors"] = ", ".join(alist) if alist else "Unknown"
+        j = p.get("journal") or {}
+        d["journal"] = j.get("title", "") if isinstance(j, dict) else str(j) if j else ""
+        d["url"] = f"https://doi.org/{d['doi']}" if d["doi"] else ""
+        d["key"] = d["doi"] or d["title"]
+        d["cited_by"] = p.get("times_cited", 0) or 0
+        d["has_fulltext"] = False
+        articles.append(d)
+    return articles
+
+
+# ---------------------------------------------------------------------------
+# DBLP — Computer science bibliography, covers all major CS conferences
 # ---------------------------------------------------------------------------
 def search_dblp(query: str, max_results: int = 50) -> list[dict]:
     base = "https://dblp.org/search/publ/api"
@@ -518,12 +640,22 @@ def write_literature_excel(articles: list[dict], output_path: str) -> str:
 # ---------------------------------------------------------------------------
 # Domain-aware database selection
 # ---------------------------------------------------------------------------
+# Biomedical keywords for general domain auto-detection
+BIOMEDICAL_KEYWORDS = [
+    "cancer", "tumor", "tumour", "disease", "clinical", "patient", "patients",
+    "cell", "cells", "protein", "gene", "genome", "genomic", "transcriptom",
+    "proteom", "metabolom", "pathway", "signaling", "therap", "drug",
+    "diagnos", "prognos", "biomarker", "infection", "immun", "mutation",
+    "kinase", "receptor", "ligand", "enzyme", "antibod", "virus", "bacter",
+    "inflammat", "apoptos", "differentiation", "stem cell",
+]
+
 DOMAIN_DATABASES = {
-    "biomedical": ["pubmed", "semantic_scholar", "crossref", "openalex"],
-    "cs_ai": ["arxiv", "dblp", "semantic_scholar", "openalex", "crossref", "ieee"],
-    "general": ["openalex", "semantic_scholar", "crossref", "pubmed", "arxiv"],
-    "engineering": ["ieee", "openalex", "crossref", "semantic_scholar"],
-    "all": ["pubmed", "arxiv", "semantic_scholar", "crossref", "openalex", "dblp", "ieee"],
+    "biomedical": ["pubmed", "europe_pmc", "semantic_scholar", "crossref", "openalex", "dimensions"],
+    "cs_ai": ["dblp", "semantic_scholar", "openalex", "crossref", "arxiv", "dimensions", "ieee"],
+    "cross": ["pubmed", "europe_pmc", "semantic_scholar", "crossref", "openalex", "dblp", "arxiv", "dimensions"],
+    "general": ["openalex", "semantic_scholar", "crossref", "dimensions"],
+    "all": ["pubmed", "europe_pmc", "arxiv", "semantic_scholar", "crossref", "openalex", "dblp", "ieee", "dimensions"],
 }
 
 
@@ -533,7 +665,7 @@ DOMAIN_DATABASES = {
 def main():
     parser = argparse.ArgumentParser(description="Multi-database literature search")
     parser.add_argument("--topic", default=None, help="Search topic (single topic)")
-    parser.add_argument("--output_dir", required=True, help="Output directory")
+    parser.add_argument("--output-dir", required=True, help="Output directory")
     parser.add_argument("--max_per_db", type=int, default=80, help="Max results per database")
     parser.add_argument("--years", default="", help="Year range, e.g. 2021-2025 (empty = no limit)")
     parser.add_argument("--domain", default="all",
@@ -557,7 +689,16 @@ def main():
     if args.databases:
         db_list = args.databases
     else:
-        db_list = DOMAIN_DATABASES.get(args.domain, DOMAIN_DATABASES["all"])
+        db_list = list(DOMAIN_DATABASES.get(args.domain, DOMAIN_DATABASES["all"]))
+        # Auto-detect: if domain is "general" and topic contains biomedical keywords,
+        # conditionally add pubmed and europe_pmc to reach ≥4 databases
+        if args.domain == "general":
+            topic_text = " ".join(topics).lower()
+            if any(kw in topic_text for kw in BIOMEDICAL_KEYWORDS):
+                for extra_db in ["pubmed", "europe_pmc"]:
+                    if extra_db not in db_list:
+                        db_list.append(extra_db)
+                        print(f"  [auto] Added {extra_db} — biomedical keywords detected in topic")
 
     os.makedirs(args.output_dir, exist_ok=True)
     print(f"Domain: {args.domain}")
@@ -576,6 +717,8 @@ def main():
     search_fn = {
         "pubmed": lambda q: fetch_pubmed_details(
             search_pubmed(q, args.max_per_db, args.years)),
+        "europe_pmc": lambda q: search_europe_pmc(
+            q, args.max_per_db, args.years),
         "arxiv": lambda q: search_arxiv(q, args.max_per_db),
         "semantic_scholar": lambda q: search_semantic_scholar(
             q, args.max_per_db, args.years),
@@ -586,6 +729,8 @@ def main():
         "dblp": lambda q: search_dblp(q, args.max_per_db),
         "ieee": lambda q: search_ieee(
             q, args.max_per_db, args.years, args.ieee_api_key),
+        "dimensions": lambda q: search_dimensions(
+            q, args.max_per_db, args.years),
     }
 
     for topic_idx, topic in enumerate(topics):
@@ -622,13 +767,13 @@ def main():
     all_articles.sort(key=sort_key)
 
     # Save JSON
-    json_path = os.path.join(args.output_dir, "literature_search.json")
+    json_path = Path(args.output_dir) / "literature_search.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(all_articles, f, ensure_ascii=False, indent=2)
     print(f"Saved JSON: {json_path}")
 
     # Save Excel
-    excel_path = os.path.join(args.output_dir, "literature_search.xlsx")
+    excel_path = Path(args.output_dir) / "literature_search.xlsx"
     write_literature_excel(all_articles, excel_path)
     print(f"Saved Excel: {excel_path}")
 

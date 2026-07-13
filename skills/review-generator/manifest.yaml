@@ -5,24 +5,26 @@ axes:
   domain:
     detect: "Classify from the requested topic and its evidence base."
     values:
-      biomedical: "static/fragments/domain/biomedical.md"
-      cs_ai: "static/fragments/domain/cs_ai.md"
-      cross: "static/fragments/domain/cross.md"
-      general: "static/fragments/domain/general.md"
+      biomedical: "fragments/domain-biomedical.md"
+      cs_ai: "fragments/domain-cs-ai.md"
+      cross: "fragments/domain-cross.md"
+      general: "fragments/domain-general.md"
   language:
     detect: "Always generate both Chinese and English documents."
-    values:
-      zh: "static/fragments/language/zh.md"
-      en: "static/fragments/language/en.md"
+    values: {}
 
 always_load:
-  - "static/core/workflow.md"
-  - "static/core/principles.md"
-  - "static/core/output-contract.md"
+  - "principles.md"
+  - "standards/output-contract.md"
 
 references:
   on_demand:
-    citation_formats: "references/citation-formats.md"
-    database_guide: "references/database-guide.md"
-    review_structure: "references/review-structure.md"
-    writing_quality: "references/writing-quality.md"
+    citation_formats: "standards/citation-formats.md"
+    sequential_citation: "standards/sequential-citation.md"
+    database_guide: "guides/database-guide.md"
+    deep_analysis: "guides/deep-analysis.md"
+    literature_quality_gates: "guides/literature-quality-gates.md"  # §1 loaded after screening, §2 loaded after deep analysis
+    review_structure: "templates/structure-common.md"
+    scoring_system: "standards/scoring-system.md"
+    writing_quality: "standards/writing-quality.md"
+    zh_translation: "standards/zh.md"

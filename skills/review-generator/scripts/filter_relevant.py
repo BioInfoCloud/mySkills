@@ -49,7 +49,7 @@ def normalise(record: dict) -> dict:
         "pmid": str(record.get("pmid") or record.get("id") if source.lower() == "pubmed" else ""),
         "url": str(record.get("url") or (f"https://doi.org/{doi}" if doi else "")),
         "cited_by": int(record.get("cited_by") or record.get("citationCount") or 0),
-        "open_access": "Yes" if record.get("has_fulltext") or record.get("isOpenAccess") else "Unknown",
+        "open_access": "Yes" if record.get("has_fulltext") else "Unknown",
         "abstract": str(record.get("abstract") or "").strip(),
     }
 
@@ -88,7 +88,7 @@ def write_excel(records: list[dict], path: Path) -> None:
 
 def main_custom(input_path: str = None, output_dir: str = None,
                 topic: str = "", keep_indices: list[int] = None,
-                max_papers: int = 60) -> None:
+                max_papers: int = 100) -> None:
     if input_path and output_dir:
         _do_filter(input_path, output_dir, topic, keep_indices, max_papers)
         return
@@ -98,14 +98,15 @@ def main_custom(input_path: str = None, output_dir: str = None,
     parser.add_argument("--topic", default="", help="Used only for automatic ranking")
     parser.add_argument("--keep-indices", nargs="+", type=int,
                         help="1-based indices selected after manual screening")
-    parser.add_argument("--max-papers", type=int, default=60)
+    parser.add_argument("--max-papers", type=int, default=100)
     args = parser.parse_args()
     _do_filter(args.input, args.output_dir, args.topic, args.keep_indices, args.max_papers)
 
 
 def _do_filter(input_path, output_dir, topic, keep_indices, max_papers):
-    if keep_indices and max_papers and not 1 <= max_papers <= 150:
-        sys.exit("--max-papers must be between 1 and 150")
+    # Validate max_papers range (used for auto-ranking when keep_indices is not provided)
+    if not keep_indices and not 1 <= max_papers <= 300:
+        sys.exit("--max-papers must be between 1 and 300")
 
     candidates = [normalise(r) for r in load_candidates(Path(input_path))]
     candidates = [r for r in candidates if r["title"]]
@@ -118,7 +119,15 @@ def _do_filter(input_path, output_dir, topic, keep_indices, max_papers):
         selected = rank(candidates, topic)[:max_papers]
         print("WARNING: Automatic ranking is only a starting point; screen records before drafting.")
     if len(selected) != len({(r["doi"].lower() or r["title"].lower()) for r in selected}):
-        sys.exit("Final selection contains duplicate titles or DOIs.")
+        print("WARNING: Auto-deduplicating duplicate titles or DOIs in final selection.")
+        seen = set()
+        deduped = []
+        for r in selected:
+            key = (r["doi"].lower() or r["title"].lower())
+            if key not in seen:
+                seen.add(key)
+                deduped.append(r)
+        selected = deduped
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
@@ -127,11 +136,11 @@ def _do_filter(input_path, output_dir, topic, keep_indices, max_papers):
     (output_path / "selected_papers.json").write_text(
         json.dumps(selected, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    write_excel(selected, output_path / "literature_search.xlsx")
+    write_excel(selected, output_path / "selected_papers.xlsx")
     print(f"Selected {len(selected)} papers")
     print(f"Saved: {output_path / 'selected_papers.json'}")
-    print(f"Saved: {output_path / 'literature_search.xlsx'}")
+    print(f"Saved: {output_path / 'selected_papers.xlsx'}")
 
 
 if __name__ == "__main__":
-    main()
+    main_custom()
