@@ -1,0 +1,39 @@
+# Routing / progressive-disclosure config for ProjGrantGen.
+# Core files always loaded; section standards + references loaded on demand.
+
+axes:
+  domain:
+    detect: "Classify from the project title + theme + evidence base."
+    values:
+      biomedical: "references/nsfc-framework.md"
+      cs_ai: "references/nsfc-framework.md"
+      cross: "references/nsfc-framework.md"
+      engineering: "references/nsfc-framework.md"
+      general: "references/nsfc-framework.md"
+  language:
+    detect: "Proposals are authored in Chinese (zh) by default."
+    values: {}
+
+always_load:
+  - "standards/writing-quality.md"
+  - "references/proposal-template-map.md"
+  - "references/nsfc-framework.md"
+  - "templates/output-md-skeleton.md"
+
+references:
+  on_demand:
+    section1_lixiang: "standards/section1-lixiang.md"
+    section2_content: "standards/section2-content.md"
+    section3_methods: "standards/section3-methods.md"
+    section4_innovation: "standards/section4-innovation.md"
+    section5_indicators: "standards/section5-indicators.md"
+    research_basis: "standards/research-basis.md"
+    abstract_rules: "standards/abstract-rules.md"
+    citation_rules: "standards/citation-rules.md"
+    citation_formats: "standards/citation-formats.md"
+    scoring_system: "standards/scoring-system.md"
+    sequential_citation: "standards/sequential-citation.md"
+    deep_analysis: "guides/deep-analysis.md"
+    literature_search: "guides/literature-search.md"
+    literature_integration: "guides/literature-integration.md"
+    docx_fill_techniques: "references/docx-fill-techniques.md"
