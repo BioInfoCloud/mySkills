@@ -77,7 +77,7 @@ description: >-
 
 1. **基本信息表 + 参与者表 + 经费预算表**（结构化填空，先占位）
 2. **（一）立项依据与研究内容，即第 1 节"项目的立项依据"**（含撰写者自拟的论点式内容小标题 1.1…1.N【领域自适应：机制类=先提出科学假说，再概括验证方案，最后写验证后的科学意义；工具开发/数据库构建类=写开发必要性，再写对科研的重大意义，最后写实现方式，正文不出现"科学假说"字样、也不声明"不设科学假说"，且禁止以"研究策略：""研究意义："加粗分段开头】、主要参考文献）；本节参见 §4 与 `standards/section1-lixiang.md`
-3. **2. 项目的研究内容、研究目标，以及拟解决的关键科学问题**（2.1/2.2/2.3，各自最多一级（1）（2）（3））—— `standards/section2-content.md`
+3. **2. 项目的研究内容、研究目标，以及拟解决的关键科学问题**（2.1/2.2/2.3 与 2.4 技术难点，各自最多一级（1）（2）（3））—— `standards/section2-content.md`
 4. **3. 拟采取的研究方案及可行性分析**（常规技术不展开；可行性区分"已完成/拟开展"；**实验设计须合理**：对照/样本量/重复/随机化/统计检验/验证实验明确，缺口以【申请人补充】标注）—— `standards/section3-methods.md`
 5. **4. 本项目的特色与创新之处**（不夸大；**创新表述 4 原则**：① 先承认已有，再指出缺口，最后说改进；② 可落地可验证（拒绝空泛"新范式/新框架"）；③ 区分"首创"与"优化/定制/集成"（领域适配创新、集成创新、方法优化本身即合格创新，不硬蹭"国际首创"）；④ 创新点与可行性绑定（背后隐含"我们有基础能做到"）；参见 `standards/section4-innovation.md`）
 6. **主要技术经济指标及社会效益说明**（可结合国家/地方政策）—— `standards/section5-indicators.md`
@@ -95,6 +95,9 @@ description: >-
 - [ ] **创新表述 4 原则**（特色/创新章节）：① 先承认已有，再指出缺口，最后说改进，不是一上来就\"首次/填补空白\"；② 每条创新可落地、可验证（对应量化效果或可执行流程），拒绝空泛\"新范式/新框架\"；③ 区分\"首创\"与\"优化/定制/集成\"（多数交叉课题的领域适配/集成/优化创新本身即合格），不硬蹭\"国际首创\"；④ 创新点与可行性绑定（背后隐含\"我们有基础能做到\"，对应前期数据/管线/平台）
 - [ ] **表述禁令**（全文）：成文正文无**破折号（——）**、无**箭头式表述（→、-->、---->）**、无**自指式元叙述**（"本节围绕/本节主要介绍/本节将/如前所述/综上所述"）；补充/因果/流程用逗号、括号或分句自然过渡（技术导航与代码注释不受限，见 `standards/writing-quality.md` §5）
 - [ ] **学术笔法与缺口聚焦**：行文符合资深科研工作者笔法，无"AI 腔"套话（赋能/助力/闭环/抓手/随着……快速发展等，见 `standards/writing-quality.md` §6）；现状"不足/空白"仅写与本项目科学问题直接相关者，不罗列伦理/监管/政策/认知等无关短板
+- [ ] **论证写法**：段落为"证据句与判断句交替"，非论文流水线罗列；研究意义区分科学、方法学、应用转化层次（见 `standards/section1-lixiang.md` §5）
+- [ ] **技术难点已分析**：2 节含"主要技术难点和问题分析"（可单设 2.4，或并入 2.3、3.2；见 `standards/section2-content.md`）
+- [ ] **创新点已做增量论证**：每条指明对照对象与差异维度，增量可判断（见 `standards/section4-innovation.md`）
 - [ ] 字数/层级符合该块标准
 
 ---
@@ -167,11 +170,12 @@ python <skill-root>/scripts/count_abstract.py --input "<project_slug>/proposal.m
 ```
 必须输出 `摘要字数: N (≤400 ✅/❌)`。若 ❌，回改摘要直至通过。
 
-### 5.4 结构 + 引用完整性校验（HARD GATE）
+### 5.4 结构、引用完整性与写作规范校验（HARD GATE）
 ```powershell
 python <skill-root>/scripts/validate_proposal.py --input "<project_slug>/proposal.md"
 ```
 必须打印 `Proposal validation passed`。失败时按提示修复（缺章节、摘要超限、孤儿引用等）。
+- **写作规范 lint（内置，零依赖）**：校验同时运行 `scripts/lint_writing.py`。其中**破折号、箭头式表述、自指元叙述、摘要含预期成果或文献引用**属 ERROR，直接判校验失败；**AI 腔词、空泛开头与空转过渡、立项依据超 8000 字**属 WARN，须逐条判断是修正还是保留。也可单独运行 `python <skill-root>/scripts/lint_writing.py --input "<project_slug>/proposal.md"`（`--strict-ai` 可把 AI 腔词提升为 ERROR）。
 - **预印本硬性拦截（HARD GATE）**：校验脚本会扫描 `proposal.md` 的"主要参考文献"列表与 `selected_papers.json`，若发现任何预印本条目（arXiv / bioRxiv / medRxiv / Research Square / SSRN / preprint 等，任何领域均禁止）即报错失败；修复方式：将预印本替换为**对应正式出版版本**（含卷期页/DOI），若该文仅有预印本则整条删除并从正文移除其引用，然后重跑重编号。
 
 ### 5.5 交付说明
@@ -199,4 +203,5 @@ python <skill-root>/scripts/validate_proposal.py --input "<project_slug>/proposa
 | 技术经济指标 | `standards/section5-indicators.md` |
 | 研究基础/工作条件 | `standards/research-basis.md` |
 | 合并渲染 | `templates/output-md-skeleton.md`, `templates/模板.docx`（内置真实模板，填充模式默认目标）; `references/docx-fill-techniques.md`（python-docx 填充技术细节，改脚本前必读） |
+| 校验与交付 | `scripts/validate_proposal.py`（结构、引用完整性、写作规范门禁）, `scripts/lint_writing.py`, `scripts/count_abstract.py`, `scripts/citation_integrity.py`, `scripts/generate_docx.py` |
 | 文献检索/分析/引用 | `scripts/literature_search.py`, `scripts/analysis_skeleton.py`, `scripts/renumber_citations.py`; `standards/citation-formats.md`, `standards/scoring-system.md`, `standards/sequential-citation.md`; `guides/literature-search.md`, `guides/deep-analysis.md`, `guides/literature-integration.md` |

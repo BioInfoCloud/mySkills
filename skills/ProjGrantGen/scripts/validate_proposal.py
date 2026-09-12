@@ -25,6 +25,7 @@ from count_abstract import extract_abstract, count_chars
 # 引用完整性校验为纯标准库实现，**不**从 generate_docx 导入——
 # 否则未安装 python-docx 时（generate_docx 缺依赖即退出）校验脚本无法运行。
 from citation_integrity import check_citation_integrity
+from lint_writing import lint as lint_writing
 
 REQUIRED_SECTIONS = [
     "一、项目基本信息",
@@ -154,6 +155,16 @@ def main():
                       + " | ".join(_preprint_hits[:5]))
     else:
         print("预印本: 参考文献区域未发现预印本条目 ✅")
+
+    # 5. 写作规范 lint（禁令词表与字数）：ERROR 并入校验失败，WARN 仅提示
+    #    规则见 standards/writing-quality.md §5/§6、standards/abstract-rules.md
+    lint_err, lint_warn = lint_writing(md)
+    for _ln, _kind, _ctx in lint_err:
+        errors.append(f"[写作规范] L{_ln} {_kind}：{_ctx}")
+    print(f"写作规范: 错误 {len(lint_err)}，提示 {len(lint_warn)} "
+          f"{'✅' if not lint_err else '❌'}")
+    for _ln, _kind, _ctx in lint_warn:
+        print(f"  ⚠️ L{_ln} {_kind}：{_ctx}")
 
     # Report
     print("\n=== 章节完整性 ===")

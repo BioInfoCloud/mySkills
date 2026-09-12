@@ -60,3 +60,5 @@
 `--from-json`（见 `guides/literature-search.md` C 节）；引用格式与编号规则仍按
 `standards/citation-formats.md`、`standards/sequential-citation.md` 执行，并在交付说明
 标注 `[文献检索为代理补充，请核对]`。
+
+- **摘要缺失时的红线处置**：降级检索常缺 `abstract`，而"引用前必须与摘要核实实体名与论断"是硬要求。缺摘要的条目**不得**用于绑定具体实体名或量化论断，只能作背景引用；交付说明须逐条标注 `[该条未获摘要，实体与论断未核验]`。
