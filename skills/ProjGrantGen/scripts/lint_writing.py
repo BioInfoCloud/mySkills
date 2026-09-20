@@ -19,6 +19,7 @@
     W2 空泛开头与空转过渡（随着……快速发展 / 值得注意的是 等）
     W3 立项依据正文字数超过 8000
     W4 摘要字数接近上限（> 390）
+    W5 立项依据收束段（最后一个 1.x 小节）偏长（> 600 字）
 
 说明：基因或蛋白符号、单位、DOI 中的连字符与 en dash（–）不在破折号之内，不误报。
       参考文献列表区（"主要参考文献"标题之后）与表格行不参与正文扫描。
@@ -39,6 +40,8 @@ from count_abstract import extract_abstract, count_chars
 REF_HEADING = re.compile(r"^#{1,6}\s*.*主要参考文献\s*$", re.MULTILINE)
 SEC1_HEADING = re.compile(r"^#{1,6}\s*.*1\.\s*项目的立项依据", re.MULTILINE)
 SEC2_HEADING = re.compile(r"^#{1,6}\s*.*2\.\s*项目的研究内容", re.MULTILINE)
+# 立项依据内部的论点式小节标题（1.1 / 1.2 / …，不含主标题"1. 项目的立项依据"）
+SUBSEC1_HEADING = re.compile(r"^#{3,6}\s*1\.(\d+)[\s、.．]", re.MULTILINE)
 
 # 标点禁令
 DASH_RE = re.compile(r"[\u2014\u2015]")          # — （em dash）、― （horizontal bar）
@@ -74,6 +77,7 @@ EXPECT_WORDS = (
 )
 
 SEC1_CHAR_LIMIT = 8000
+SEC1_TAIL_LIMIT = 600          # 收束段（最后一个 1.x 小节）长度软上限
 ABSTRACT_NEAR_LIMIT = 390
 
 
@@ -135,6 +139,20 @@ def lint(md: str, strict_ai: bool = False):
         n = count_chars(seg)
         if n > SEC1_CHAR_LIMIT:
             warnings.append((0, "W3 立项依据字数超限", f"{n} / {SEC1_CHAR_LIMIT}"))
+
+        # 收束段（最后一个 1.x 小节）应简短，明显短于前面的论点小节
+        subs = list(SUBSEC1_HEADING.finditer(seg))
+        if subs:
+            tail = seg[subs[-1].end():]
+            tail_body = "\n".join(
+                ln for ln in tail.split("\n") if not ln.strip().startswith("#")
+            )
+            tn = count_chars(tail_body)
+            if tn > SEC1_TAIL_LIMIT:
+                warnings.append(
+                    (0, "W5 立项依据收束段偏长",
+                     f"1.{subs[-1].group(1)} 小节 {tn} 字（建议 1–2 段、约 200–400 字）")
+                )
 
     return errors, warnings
 
