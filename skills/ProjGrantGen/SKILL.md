@@ -138,8 +138,8 @@ description: >-
 
 ### 4.3 引用与重编号
 - 起草时用临时标记 `[[ref_no]]`（来自 `selected_papers.json` 的 `ref_no`），**不**手写最终编号。
-- 正文定稿后运行 `scripts/renumber_citations.py --input-dir "<project_slug>"` 生成顺序 `[1][2]…` 并重建参考文献列表（自动定位"主要参考文献"标题、判定中/英格式、通过 DOI/PMID 补全元数据）。
-- 引用格式严格按 `standards/citation-formats.md`（中文文献用 `[N] 作者. 文题[J]. 期刊, 年, 卷(期): 页.`；英文用 Vancouver）。
+- 正文定稿后运行 `scripts/renumber_citations.py --input-dir "<project_slug>"` 生成顺序 `[1][2]…` 并重建参考文献列表（自动定位"主要参考文献"标题、判定中/英格式、通过 DOI/PMID 补全元数据）。**该脚本对"字段不完整"与"预印本"条目执行硬性拦截：核心字段（作者/题名/刊名/年/卷/页）与标识符（doi/pmid/url）任一缺失即渲染 `[METADATA_MISSING]` 并阻断写入、返回非零退出码；务必补全 `selected_papers.json`（或提供 DOI/PMID 由脚本自动 enrich）后重跑。**
+- 引用格式严格按 `standards/citation-formats.md`（中文文献用 `[N] 作者. 文题[J]. 期刊, 年, 卷(期): 页.`；英文用 Vancouver）。**正文内联 `[N]` 引用在 docx 中渲染为上标；"主要参考文献"列表条目的 `[N]` 为序号、不上标**（由 `generate_docx.py` 自动区分）。
 - 引用准确性核验：抽查 8–12 条断言与原文摘要是否吻合；每增删引用须重跑重编号。
 - 近 5 年文献占比 ≥50%；不得出现占位区间如 `[21-157]`；每条参考文献至少在正文被引 1 次，每条正文引用须有对应条目（由 `validate_proposal.py` 校验）。
 
@@ -206,5 +206,5 @@ python <skill-root>/scripts/validate_proposal.py --input "<project_slug>/proposa
 | 技术经济指标 | `standards/section5-indicators.md` |
 | 研究基础/工作条件 | `standards/research-basis.md` |
 | 合并渲染 | `templates/output-md-skeleton.md`, `templates/模板.docx`（内置真实模板，填充模式默认目标）; `references/docx-fill-techniques.md`（python-docx 填充技术细节，改脚本前必读） |
-| 校验与交付 | `scripts/validate_proposal.py`（结构、引用完整性、写作规范门禁）, `scripts/lint_writing.py`, `scripts/count_abstract.py`, `scripts/citation_integrity.py`, `scripts/generate_docx.py` |
+| 校验与交付 | `scripts/validate_proposal.py`（结构、引用完整性、参考文献完整性、写作规范门禁）, `scripts/lint_writing.py`, `scripts/count_abstract.py`, `scripts/citation_integrity.py`, `scripts/generate_docx.py`, `scripts/generate_route_diagram.py`（矢量技术路线图，字体 20，可编辑 SVG） |
 | 文献检索/分析/引用 | `scripts/literature_search.py`, `scripts/analysis_skeleton.py`, `scripts/renumber_citations.py`; `standards/citation-formats.md`, `standards/scoring-system.md`, `standards/sequential-citation.md`; `guides/literature-search.md`, `guides/deep-analysis.md`, `guides/literature-integration.md` |

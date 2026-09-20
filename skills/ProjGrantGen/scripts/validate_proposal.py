@@ -156,7 +156,31 @@ def main():
     else:
         print("预印本: 参考文献区域未发现预印本条目 ✅")
 
-    # 5. 写作规范 lint（禁令词表与字数）：ERROR 并入校验失败，WARN 仅提示
+    # 5. 参考文献完整性二次校验（扫描渲染后的条目，捕获任何来源的残留占位/缺失标记；
+    #    与 renumber_citations 的硬性拦截互补——凡出现 [METADATA_MISSING]/[PREPRINT_FORBIDDEN]
+    #    或 Unknown/N/A 占位，均视为条目信息不完整，须补全后重跑重编号）。
+    _m_ref = re.search(r"^#{1,6}\s*.*(主要参考文献|参考文献)\s*$", md, re.MULTILINE)
+    _ref_lines = []
+    if _m_ref:
+        for ln in md[_m_ref.end():].split("\n"):
+            s = ln.strip()
+            if re.match(r"^\[\d+\]\s", s):
+                _ref_lines.append(s)
+    if _ref_lines:
+        _PLACEHOLDER_RE = re.compile(
+            r"(METADATA_MISSING|PREPRINT_FORBIDDEN|Unknown Author|Unknown Title|"
+            r"Unknown Journal|\bN/A\b)"
+        )
+        _incomplete = [s for s in _ref_lines if _PLACEHOLDER_RE.search(s)]
+        if _incomplete:
+            errors.append("参考文献列表存在不完整/占位条目（须补全 selected_papers.json 后重跑重编号）: "
+                          + " | ".join(s[:70] for s in _incomplete[:5]))
+        else:
+            print(f"参考文献完整性: {len(_ref_lines)} 条条目均无占位/缺失标记 ✅")
+    else:
+        print("（未提取到参考文献列表条目，跳过完整性二次校验）")
+
+    # 6. 写作规范 lint（禁令词表与字数）：ERROR 并入校验失败，WARN 仅提示
     #    规则见 standards/writing-quality.md §5/§6、standards/abstract-rules.md
     lint_err, lint_warn = lint_writing(md)
     for _ln, _kind, _ctx in lint_err:
@@ -165,6 +189,34 @@ def main():
           f"{'✅' if not lint_err else '❌'}")
     for _ln, _kind, _ctx in lint_warn:
         print(f"  ⚠️ L{_ln} {_kind}：{_ctx}")
+
+    # 7. 主题一致性轻量校验（INFO/WARN，非阻断）：题目核心术语须出现在摘要与研究内容中
+    def _ngrams(text, nmin=2, nmax=4):
+        """提取重叠的 2–4 字中文 n-gram（先去标点空格，避免跨标点拼接）。"""
+        text = re.sub(r"[\s，。；、：,.!?；：（）()\[\]'\"']", "", text or "")
+        out = set()
+        for n in range(nmin, nmax + 1):
+            for i in range(len(text) - n + 1):
+                out.add(text[i:i + n])
+        return out
+
+    _title_m = re.search(r"^#\s+(.+)$", md, re.MULTILINE)
+    _title = _title_m.group(1).strip() if _title_m else ""
+    _abs_m = re.search(r"项目摘要（限400字）：(.+?)(?=\*\*关键词\*\*|关键词：)", md, re.S)
+    _abstract = _abs_m.group(1).strip() if _abs_m else ""
+    _c21_m = re.search(r"2\.1\s*研究内容(.+?)(?=2\.2\s*研究目标)", md, re.S)
+    _content21 = _c21_m.group(1).strip() if _c21_m else ""
+    if _title and (_abstract or _content21):
+        _stop = {"研究", "基于", "面向", "一种", "及其", "关于", "用于", "针对", "以及",
+                 "的", "与", "和", "及", "在", "对", "以", "从", "为", "等", "中", "该",
+                 "我们", "本文", "本项", "项目", "展开", "进行", "实现", "方法", "分析"}
+        _title_terms = _ngrams(_title) - _stop
+        if _abstract:
+            _abs_hit = bool(_title_terms & _ngrams(_abstract))
+            print(f"主题一致性（题目↔摘要）: {'核心术语命中 ✅' if _abs_hit else '⚠️ 题目核心术语未在摘要出现，请核对摘要是否紧扣题目'}")
+        if _content21:
+            _c_hit = bool(_title_terms & _ngrams(_content21))
+            print(f"主题一致性（题目↔研究内容2.1）: {'核心术语命中 ✅' if _c_hit else '⚠️ 题目核心术语未在研究内容(2.1)出现，请核对研究内容是否紧扣题目'}")
 
     # Report
     print("\n=== 章节完整性 ===")

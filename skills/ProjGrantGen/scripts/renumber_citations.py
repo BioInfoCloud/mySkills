@@ -160,29 +160,75 @@ def _has_cjk(text: str) -> bool:
     return any("\u4e00" <= ch <= "\u9fff" for ch in (text or ""))
 
 
+# 参考文献完整性硬红线：核心字段与标识符缺一不可；issue 强烈建议补全
+REQUIRED_REF_CORE = ["authors", "title", "journal", "year", "volume", "pages"]
+RECOMMENDED_REF_FIELDS = ["issue"]
+
+
+def _ref_field(entry: dict, key: str) -> str:
+    """读取文献字段；volume/issue/pages 兼容 enrich 写入的 _volume/_issue/_pages。"""
+    if key in ("volume", "issue", "pages"):
+        v = entry.get("_" + key, entry.get(key, ""))
+    else:
+        v = entry.get(key, "")
+    return "" if v is None else str(v).strip()
+
+
+def _is_preprint(entry: dict) -> bool:
+    title = _ref_field(entry, "title")
+    journal = _ref_field(entry, "journal")
+    url = _ref_field(entry, "url")
+    low = (title + " " + journal + " " + url).lower()
+    return bool(re.search(r"\b(arxiv|biorxiv|medrxiv|research\s*square|ssrn)\b", low)
+                or "preprint" in low or "pre-print" in low)
+
+
+def _missing_fields(entry: dict) -> tuple[list[str], list[str]]:
+    """返回 (缺失核心字段, 缺失建议字段)。
+
+    核心字段：authors/title/journal/year/volume/pages + 标识符(doi/pmid/非预印本url)。
+    建议字段：issue（GB/T 7714 卷(期) 形式强烈建议，缺失仅警告不阻断）。
+    """
+    missing_core = [f for f in REQUIRED_REF_CORE if not _ref_field(entry, f)]
+    url = _ref_field(entry, "url")
+    ident_ok = (_ref_field(entry, "doi") or _ref_field(entry, "pmid")
+                or (url and not _is_preprint(entry)))
+    if not ident_ok:
+        missing_core.append("doi/pmid/url(标识符)")
+    missing_recommended = [f for f in RECOMMENDED_REF_FIELDS if not _ref_field(entry, f)]
+    return missing_core, missing_recommended
+
+
 def format_reference(num: int, entry: dict) -> str:
-    """中文文献用 [N] 作者. 文题[J]. 期刊, 年, 卷(期): 页.；英文用 Vancouver。"""
+    """中文文献用 [N] 作者. 文题[J]. 期刊, 年, 卷(期): 页.；英文用 Vancouver。
+
+    完整性硬红线：核心字段（作者/题名/刊名/年/卷/页）与标识符（doi/pmid/url）
+    任一缺失即返回 [METADATA_MISSING] 占位并交由 build_reference_list 记录为错误；
+    预印本（任何领域）一律返回 [PREPRINT_FORBIDDEN]。
+    """
     _s = lambda v: str(v).strip() if v is not None else ""
-    # 去除元数据来源自带的末尾句点，避免与后续拼接句点叠加成 ".."（Crossref 作者/标题常见）
     authors = _s(entry.get("authors") or "Unknown Author").rstrip(".") or "Unknown Author"
     title = _s(entry.get("title") or "Unknown Title").rstrip(".") or "Unknown Title"
     journal = _s(entry.get("journal") or "Unknown Journal").rstrip(".") or "Unknown Journal"
     year = _s(entry.get("year"))
-    vol = _s(entry.get("_volume", entry.get("volume", "")))
-    issue = _s(entry.get("_issue", entry.get("issue", "")))
-    pages = _s(entry.get("_pages", entry.get("pages", "")))
+    vol = _ref_field(entry, "volume")
+    issue = _ref_field(entry, "issue")
+    pages = _ref_field(entry, "pages")
     doi = _s(entry.get("doi"))
+    pmid = _s(entry.get("pmid"))
+    url = _s(entry.get("url"))
 
     # 预印本硬性拦截（任何领域都不允许引用预印本）
-    _low = (title + " " + journal + " " + (entry.get("url") or "")).lower()
-    if re.search(r"\b(arxiv|biorxiv|medrxiv|research\s*square|ssrn)\b", _low) or \
-       "preprint" in _low or "pre-print" in _low:
+    if _is_preprint(entry):
         return (f"[{num}] [PREPRINT_FORBIDDEN: 预印本禁止引用（任何领域）；"
                 f"请替换为对应正式版或删除该条目 — {title[:60]}]")
 
-    if not (title and authors and journal):
-        return (f"[{num}] [METADATA_MISSING: 补全 DOI {entry.get('doi','N/A')} "
-                f"或 PMID {entry.get('pmid','N/A')} — {title}]")
+    # 完整性硬红线：核心字段 + 标识符不得缺失
+    missing_core, _ = _missing_fields(entry)
+    if missing_core:
+        miss = "、".join(missing_core)
+        return (f"[{num}] [METADATA_MISSING: 文献信息不完整，缺失 {miss}；"
+                f"请补全 DOI/PMID 经脚本自动 enrich，或手工补齐 selected_papers.json — {title[:50]}]")
 
     if _has_cjk(title + journal):
         # 中文格式
@@ -206,6 +252,10 @@ def format_reference(num: int, entry: dict) -> str:
         line += " " + tail
     if doi:
         line += f" doi:{doi}."
+    elif pmid:
+        line += f" PMID:{pmid}."
+    elif url:
+        line += f" {url}."
     return line
 
 
@@ -216,9 +266,20 @@ def build_reference_list(ordered: list[int], papers: list[dict]) -> tuple[str, l
     for new_num, old_ref in enumerate(ordered, 1):
         entry = by_ref.get(old_ref, {})
         if not entry:
-            bad.append({"num": new_num, "issue": f"ref_no={old_ref} 不在 selected_papers.json"})
+            bad.append({"num": new_num, "level": "error",
+                        "issue": f"ref_no={old_ref} 不在 selected_papers.json"})
             lines.append(f"[{new_num}] [METADATA_MISSING: ref_no={old_ref} 未找到]")
         else:
+            missing_core, missing_recommended = _missing_fields(entry)
+            if missing_core:
+                bad.append({"num": new_num, "level": "error",
+                            "issue": "文献字段缺失: " + "、".join(missing_core)})
+            elif _is_preprint(entry):
+                bad.append({"num": new_num, "level": "error",
+                            "issue": "预印本禁止引用（任何领域），请替换或删除"})
+            elif missing_recommended:
+                bad.append({"num": new_num, "level": "warn",
+                            "issue": "建议补全字段: " + "、".join(missing_recommended)})
             lines.append(format_reference(new_num, entry))
         lines.append("")  # 空行分隔 → docx 每条独立成段（悬挂缩进）
     return "\n".join(lines).strip(), bad
@@ -366,6 +427,8 @@ def main() -> None:
     new_body = re.sub(r"\[(ANALYSIS|EVIDENCE|CAUTION[^\]]*)\]", "", new_body)
 
     ref_list, bad = build_reference_list(ordered, selected)
+    errs = [b for b in bad if b.get("level") != "warn"]
+    warns = [b for b in bad if b.get("level") == "warn"]
 
     # 重组：重编号后的正文 + 参考文献标题 + 空行 + 参考文献列表 + （若有）后续章节
     new_lines = new_body.split("\n")          # 已重编号的正文
@@ -401,16 +464,27 @@ def main() -> None:
         print("       或修正文献条目标题/关键词后重跑本脚本。")
         fail = 1
     else:
-        fail = 0
-        proposal_path.write_text("\n".join(new_lines), encoding="utf-8")
-        print(f"✅ 实体↔编号↔标题一致性校验通过（{len(list(ENTITY_PAIR.finditer(new_body)))} 处实体引用）")
-        print(f"已重编号并写回: {proposal_path}")
+        if errs:
+            # 参考文献存在硬性缺陷（字段缺失/预印本/未找到）→ 阻断写入
+            fail = 1
+            print("\n❌ 因参考文献存在硬性缺陷，已阻断写入 proposal.md：")
+            for b in errs[:20]:
+                print(f"  [{b['num']}] {b['issue']}")
+            print("→ 处理：补全 selected_papers.json 对应条目的缺失字段"
+                  "（或提供 DOI/PMID 由脚本 enrich）后重跑本脚本。")
+        else:
+            fail = 0
+            proposal_path.write_text("\n".join(new_lines), encoding="utf-8")
+            print(f"✅ 实体↔编号↔标题一致性校验通过（{len(list(ENTITY_PAIR.finditer(new_body)))} 处实体引用）")
+            print(f"已重编号并写回: {proposal_path}")
 
-    if bad:
-        print(f"\n⚠️ {len(bad)} 条参考文献元数据缺失：")
-        for b in bad[:20]:
+    if warns:
+        print(f"\n⚠️ {len(warns)} 条参考文献建议补全字段（非阻断）：")
+        for b in warns[:20]:
             print(f"  [{b['num']}] {b['issue']}")
-        print("请补全 selected_papers.json 后重跑本脚本。")
+    if errs:
+        print(f"\n❌ {len(errs)} 条参考文献存在硬性缺陷（字段缺失/预印本/未找到），"
+              f"已阻断写入，须修复后重跑。")
 
     # 校验
     if CITATION_MARKER.search(new_body):

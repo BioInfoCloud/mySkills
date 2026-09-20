@@ -214,7 +214,17 @@ def _run_font_config(config, is_heading=False):
     return western, eastasia
 
 
-def add_runs_with_formatting(paragraph, text, lang_config, is_small_text=False):
+# 引用标记（正文内联 [N] / [N,M] / [N-M]），用于判定是否渲染为上标
+_CITE_PART = re.compile(r"^\[[\d\-,\s]+\]$")
+
+
+def add_runs_with_formatting(paragraph, text, lang_config, is_small_text=False,
+                             superscript_citations=True):
+    """按 **粗体** / *斜体* / [N] 引用 解析并写入 runs。
+
+    superscript_citations=True 时，正文内联 [N] 引用渲染为**上标**（学术规范）；
+    参考文献列表条目（[N] 为条目序号，非内联引用）须传 False，否则序号会被错误上标。
+    """
     pattern = r'(\*\*[^*]+\*\*|\*[^*]+\*|\[[\d\-,\s]+\])'
     parts = re.split(pattern, text)
     font_size = lang_config["ref_size"] if is_small_text else lang_config["body_size"]
@@ -228,6 +238,8 @@ def add_runs_with_formatting(paragraph, text, lang_config, is_small_text=False):
             run = paragraph.add_run(part[1:-1]); run.italic = True
         else:
             run = paragraph.add_run(part)
+            if superscript_citations and _CITE_PART.match(part):
+                run.font.superscript = True
         _set_run_font(run, western_font, eastasia_font, font_size)
 
 
@@ -358,11 +370,15 @@ def generate_docx(blocks, output_path, lang="zh"):
             if in_references:
                 para.paragraph_format.left_indent = Cm(0.74)
                 para.paragraph_format.first_line_indent = Cm(-0.74)
-                add_runs_with_formatting(para, content, config, is_small_text=True)
+                # 参考文献列表条目：序号 [N] 为条目编号，非内联引用，不上标
+                add_runs_with_formatting(para, content, config, is_small_text=True,
+                                         superscript_citations=False)
             elif is_abstract:
                 add_runs_with_formatting(para, content, config, is_small_text=True)
             else:
-                add_runs_with_formatting(para, content, config)
+                # 正文段落：内联 [N] 引用渲染为上标
+                add_runs_with_formatting(para, content, config,
+                                         superscript_citations=True)
 
     doc.save(output_path)
     return output_path
@@ -697,8 +713,12 @@ def _set_fixed_line_spacing(para, pt=BODY_LINE_SPACING_PT):
     spacing.set(qn('w:lineRule'), 'exact')
 
 
-def _fill_runs(paragraph, text, font_name, size, bold=False):
-    """Add runs to paragraph; both ascii & eastasia set to font_name (楷体)."""
+def _fill_runs(paragraph, text, font_name, size, bold=False, superscript_citations=True):
+    """Add runs to paragraph; both ascii & eastasia set to font_name (楷体).
+
+    superscript_citations=True 时正文内联 [N] 引用渲染为上标；参考文献列表
+    条目（[N] 为序号）须传 False。
+    """
     # 硬规范：正文禁止日式引号「」；统一替换为中文弯引号“”（防起草稿残留）
     text = text.replace("「", "\u201c").replace("」", "\u201d")
     # 硬规范：正文行距固定值 20 磅（填充模式所有正文段落共用此出口）
@@ -709,9 +729,12 @@ def _fill_runs(paragraph, text, font_name, size, bold=False):
         if not part:
             continue
         is_b = part.startswith("**") and part.endswith("**")
+        is_cite = (not is_b) and _CITE_PART.match(part)
         run_text = part[2:-2] if is_b else part
         run = paragraph.add_run(run_text)
         run.bold = bold or is_b
+        if superscript_citations and is_cite:
+            run.font.superscript = True
         _style_fill_run(run, font_name, size)
 
 
@@ -780,7 +803,9 @@ def append_md_to_cell(cell, md_text, font_name=FILL_FONT, size=FILL_SIZE):
         para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         if btype == "para":
             _set_first_line_indent_chars(para)
-        _fill_runs(para, txt, font_name, size, bold=(btype == "heading"))
+        # 参考文献列表条目（ref）序号不上标；正文/标题内联引用上标
+        _fill_runs(para, txt, font_name, size, bold=(btype == "heading"),
+                   superscript_citations=(btype != "ref"))
 
 
 def _strip_cell_empty_paragraphs(cell):
@@ -822,7 +847,9 @@ def _insert_md_after_heading(cell, heading_pattern, md_text,
         para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         if btype == "para":
             _set_first_line_indent_chars(para)
-        _fill_runs(para, txt, font_name, size, bold=(btype == "heading"))
+        # 参考文献列表条目（ref）序号不上标；正文/标题内联引用上标
+        _fill_runs(para, txt, font_name, size, bold=(btype == "heading"),
+                   superscript_citations=(btype != "ref"))
         anchor.addnext(para._element)
         anchor = para._element
         n += 1
@@ -1135,12 +1162,13 @@ def build_simple_doc(data, out_path, template, cn_font=FILL_FONT,
             para.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
             _set_fixed_line_spacing(para)  # 行距固定值 20 磅
             if btype == "heading":
-                _fill_runs(para, txt, cn_font, 12, bold=True)
+                _fill_runs(para, txt, cn_font, 12, bold=True, superscript_citations=True)
             elif btype == "ref":
-                _fill_runs(para, txt, cn_font, FILL_SIZE_SMALL)
+                # 参考文献列表条目：序号 [N] 为条目编号，非内联引用，不上标
+                _fill_runs(para, txt, cn_font, FILL_SIZE_SMALL, superscript_citations=False)
             else:
                 _set_first_line_indent_chars(para)
-                _fill_runs(para, txt, cn_font, 12)
+                _fill_runs(para, txt, cn_font, 12, superscript_citations=True)
 
     # ---- 标题 ----
     if data.get("title"):
