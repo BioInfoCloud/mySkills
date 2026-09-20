@@ -141,8 +141,14 @@ def lint(md: str, strict_ai: bool = False):
             warnings.append((0, "W3 立项依据字数超限", f"{n} / {SEC1_CHAR_LIMIT}"))
 
         # 收束段（最后一个 1.x 小节）应简短，明显短于前面的论点小节
-        subs = list(SUBSEC1_HEADING.finditer(seg))
-        if subs:
+        subs = []
+        for m in SUBSEC1_HEADING.finditer(seg):
+            eol = seg.find("\n", m.start())
+            line = seg[m.start(): eol if eol != -1 else len(seg)]
+            if "参考文献" in line:      # 参考文献小节不计入收束段
+                continue
+            subs.append(m)
+        if len(subs) >= 2:              # 至少两个小节才存在"收束段"概念
             tail = seg[subs[-1].end():]
             tail_body = "\n".join(
                 ln for ln in tail.split("\n") if not ln.strip().startswith("#")
