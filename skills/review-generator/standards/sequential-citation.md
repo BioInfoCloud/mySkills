@@ -42,7 +42,7 @@ After renumbering, open the `## References` section at the end of `review_EN.md`
 
 The complete renumbered English draft (body + introduction + reference list) now exists. Verify that **every cited claim genuinely comes from the cited source**.
 
-1. **Spot-check 8-12 claims** across the body text. For each, open `selected_papers.json`, find the cited paper's abstract, and verify: does this paper genuinely report the finding, data, method, or argument attributed to it? Pay special attention to quantitative claims (fold-changes, percentages, p-values, benchmark scores).
+1. **Verify every quantitative claim, and spot-check at least 30% of the remaining citations**, across the body text. For each, open `selected_papers.json`, find the cited paper's abstract, and verify: does this paper genuinely report the finding, data, method, or argument attributed to it? Pay special attention to quantitative claims (fold-changes, percentages, p-values, benchmark scores).
 2. **If a claim is unsupported**: find the correct paper that DOES support it, replace the citation number, or soften/remove the claim.
 3. **If you add or remove ANY citation**: re-run `renumber_citations.py` — adding/removing citations shifts first-appearance order. Then re-run the three post-script checks and the reference list format check.
 4. **Verify bracket merging**: adjacent groups like `[3],[5],[1],[2],[4]` must be merged into `[1-5]`. Consecutive sequences of 3+ use ranges. See `citation-formats.md` for Vancouver format.

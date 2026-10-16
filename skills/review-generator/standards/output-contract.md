@@ -2,8 +2,6 @@
 
 Every review generation task must produce the following deliverables.
 
-## Required deliverables
-
 ## Folder structure rules
 
 - Output files go in the **working directory** (the project directory from which the user invoked the session).
@@ -36,7 +34,7 @@ Do NOT output inside the review-generator skill directory. Always use the curren
 
 ### 2. Professional terminology and abbreviations
 
-For the Chinese version, **every professional term and abbreviation must have its English full name on first appearance** in the format:
+For the Chinese version, **every abbreviation must have its English full name on first appearance in each section** in the format:
 
 **Chinese term（English full name，Abbreviation）**
 
@@ -47,6 +45,8 @@ Examples:
 
 After first appearance in each section, use the abbreviation directly (no English expansion).
 
+This rule applies to abbreviations. For a non-abbreviation technical term, add the English original only when the term has no settled Chinese equivalent; do not gloss terms that already have an accepted Chinese name. See `zh.md` §Terminology and the 中文 AI 腔禁用清单 C.
+
 ### 3. review_CN.docx (Chinese)
 - Font: 宋体 (body and headings, bold for headings); English text within Chinese document uses Times New Roman
 - Title: 16pt bold, center-aligned
@@ -54,8 +54,8 @@ After first appearance in each section, use the abbreviation directly (no Englis
 - Body: 12pt, 1.5 line spacing, justified (两端对齐)
 - References: 10pt, hanging indent, justified
 - Tables: Academic three-line format (三线表) — top thick line, header-bottom thick line, table-bottom thick line. No vertical or interior horizontal rules.
-- Length: Chinese word count is naturally determined by English source text (via translation). No separate standard.
-- Structure: 标题 → 摘要 → 关键词(5–8个) → [缩写表] → 引言 → 主题章节 → 结论（综合终章） → 参考文献
+- Length: Both the Chinese body and the Chinese abstract follow the English source via translation, with no separate hard standard. The Chinese abstract typically renders as 250–400 字 (about 450 字 for broad comprehensive and SOTA reviews; 400–600 字 for systematic reviews), a normal range to aim for rather than a gate. Never pad or truncate to hit a number; fidelity to the English source is the requirement. The Chinese abstract is not a literal word-for-word translation.
+- Structure: 标题 → 摘要 → 关键词(5–8个) → [缩写表] → 引言 → 主题章节 → 展望 → 参考文献
 - **缩写表**: If ≥10 abbreviations used, include between Keywords and Introduction with columns: 缩写, 中文全称, 英文全称
 
 ### 4. review_EN.docx (English)
@@ -71,7 +71,7 @@ After first appearance in each section, use the abbreviation directly (no Englis
   - Systematic review: ~6,000–10,000 words + appendices
   - Critical/Perspective review: ~5,000–8,000 words
   No upper limit — quality and completeness take precedence.
-- Structure: Title → Abstract → Keywords (5–8) → [Abbreviations] → Introduction → Thematic sections → Conclusion ((Final Section, Integrated)) → References
+- Structure: Title → Abstract → Keywords (5–8) → [Abbreviations] → Introduction → Thematic sections → Outlook → References
 - **Abbreviations table**: If ≥10 abbreviations used, include between Keywords and Introduction with columns: Abbreviation, Full Form
 
 ### 5. Reference numbering and integrity
@@ -84,10 +84,11 @@ After first appearance in each section, use the abbreviation directly (no Englis
 - **NEVER use placeholder ranges like [21-157].** Every reference number must correspond to a real, individually cited paper.
 - **Reference list paragraphs**: Each `[N]` entry must be separated by a blank line (`.md`) so the .docx generator renders them as individual paragraphs. `renumber_citations.py` handles this automatically.
 - Reference count:
-  - Comprehensive review: 60–150 references
+  - Comprehensive review: 100–200 references
   - SOTA review: 100–250 references
   - Systematic review: 30–200+ references (depends on field)
-  - Critical/Perspective review: 40–80 references
+  - Critical/Perspective review: 60–100 references
+  - These are target ranges, not hard caps. If the candidate pool remains below the type-dependent minimum after all broadening attempts (relaxed filters, additional databases, query expansion), the lower bound can be relaxed; record a quality note in the output notes stating the actual count and the reason. A short review grounded in sparse evidence is preferable to an artificially padded one.
 - **Preprints**: Excluded for biomedical/cross/general domains. For CS/AI, arXiv allowed but published version preferred. Mark arXiv-only as `[arXiv preprint]`.
 - **PMC full-text**: Retrieved for critical papers. A paper qualifies if it meets ANY of these parallel criteria: (1) thematic centrality — key evidence for a review theme, (2) Tier 1 journal — Nature/Science/Cell/NEJM/Lancet/JAMA and flagship sub-journals, (3) landmark or controversy-resolving, (4) quantitative data source requiring exact verification. Claims extracted only from Results/Discussion; background citations to other papers are NOT attributed to the paper. Abstract is sufficient for most papers (~70-80%).
 
@@ -123,10 +124,10 @@ After first appearance in each section, use the abbreviation directly (no Englis
 | Verification | Every citation verifiable by DOI/PMID |
 | Bilingual consistency | Shared reference numbering; matching section structure; glossary maintained |
 | Chinese acronyms | Every abbreviation gets English full name on first use per section |
-| Figures and tables | ≥1 comparison table (figures optional — see SKILL.md §7.8). Method comparison tables and technology evolution timelines auto-generated when topic supports them. |
+| Figures and tables | ≥1 comparison table (mandatory). Figures are optional and typically not produced by the text-first pipeline — see SKILL.md §7.8. |
 | **Deep analysis** | Mandatory between screening and drafting. 9-field single-paper extraction, 5-dimension clustering, horizontal comparison tables, grounded research gaps. |
 | **Search traceability** | Full query log, per-database results count. PRISMA flow diagram for systematic reviews. |
-| **Literature structure ratio** | Frontier (past 3-5 yr) ≥60%, foundational 10–20%, rest contextual. |
+| **Literature structure ratio** | Frontier (past 3-5 yr) ≥60%, foundational 10–20%, rest contextual. For mechanism, target-discovery, or seminal-foundational topics, the frontier ratio may be relaxed where older landmark work is essential; record the actual ratio and rationale in the output notes. |
 | **Preprint proportion** | 0% for biomedical/cross/general. <5% for CS/AI; all marked. |
 | Font (CN) | 宋体（正文和标题统一）；中文文档中的英文使用Times New Roman |
 | Font (EN) | Times New Roman |
@@ -166,7 +167,7 @@ Generates review_EN.docx, review_CN.docx, literature_search.xlsx (only cited ref
 ```powershell
 python <skill-root>/scripts/validate_review.py --input-dir "./<topic_slug>" --verify-renumbering
 ```
-Validates structural completeness, reference integrity, and citation numbering. Must print `Review validation passed`.
+Validates structural completeness, reference integrity (including per-entry metadata completeness), and citation numbering. Must print `Review validation passed`.
 
 ## Validation workflow (Steps A-D)
 
@@ -180,6 +181,7 @@ Common fixes for validation failures:
 - Abstract contains `[N]`: remove citations from abstract
 - Double brackets `[[` remaining: re-run `python <skill-root>/scripts/renumber_citations.py --input-dir "./<topic_slug>"`
 - Prohibited content (preprint mentions, database methodology): delete containing paragraphs
+- Reference entry missing authors, title, venue, year, or identifier: fill the field from the database record in `selected_papers.json`, or remove the entry and re-run `python <skill-root>/scripts/renumber_citations.py --input-dir "./<topic_slug>"`
 
 **Step B — Bilingual integrity check**:
 - Chinese citation count must match English exactly
@@ -188,8 +190,9 @@ Common fixes for validation failures:
 - Chinese reference list format: each `[N]` on its own line
 - Reference list: identical between languages
 - Abstracts: zero `[` in either language
-- Reference count: ≥60 (comprehensive), ≥80 (SOTA), ≥40 (critical)
+- Reference count: ≥100 (comprehensive), ≥100 (SOTA), ≥60 (critical). The lower bound may be relaxed when the candidate pool is exhausted; record a quality note in the output notes.
 - Scan for `[AUTHOR_INPUT_NEEDED]`, `METADATA_MISSING`, preprint sources, HTML entities
+- Reference completeness: every entry carries authors, title, venue, year, and a persistent identifier (DOI/PMID/arXiv/URL) or a recognized type marker; gaps are RG-300
 
 If review_EN.md or review_CN.md content was modified, re-run `python <skill-root>/scripts/renumber_citations.py --input-dir "./<topic_slug>"` before Step C.
 

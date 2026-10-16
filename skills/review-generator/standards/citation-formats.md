@@ -100,9 +100,21 @@ Example: `[1] 陈小明, 王丽华, 李志强, 等. 深度学习在药物发现�
 
 **Thesis (Chinese):** `[N] 作者. 论文题目[D]. 授予单位所在地: 授予单位, 授予年份.`
 
+### Reference completeness (enforced by validate_review.py)
+
+Every entry in the delivered reference list must be complete. An entry is complete when it carries all of the following:
+
+- **Authors**: at least one author or corporate author, before the title.
+- **Title**: the full work title.
+- **Journal or venue**: the journal abbreviation, book publisher, conference proceedings, repository, or institution.
+- **Year**: a four-digit publication year. A year embedded in a DOI, arXiv ID, or URL does not count.
+- **Persistent identifier**: a DOI, PMID, arXiv ID, or URL. Journal and conference articles essentially always have a DOI in the database records this pipeline uses; books, theses, patents, websites, and datasets are recognized by their type format and do not require a DOI.
+
+`validate_review.py` checks every entry and reports a missing field as RG-300. When a field is missing, fill it from the database record in `selected_papers.json`; if it cannot be completed, remove the entry entirely and re-run renumbering. Never ship an entry with a gap or a placeholder.
+
 ## Common pitfalls
 
-- **Missing DOIs**: Always include DOI when available.
+- **Missing DOIs**: journal and conference articles must carry a DOI (or a PMID/URL when no DOI exists). Always include DOI when available.
 - **Inconsistent author names**: Same format for every reference; abbreviated first names with periods.
 - **Missing volume/issue/pages**: Leave empty rather than guessing.
 - **Duplicate references**: Never list the same paper under two numbers.

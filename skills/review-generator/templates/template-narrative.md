@@ -10,6 +10,8 @@ Abstract (unstructured, 150–250 words; up to 300 for broad topics — see ../s
 Keywords (5–8)
 [Abbreviations table — if ≥10 abbreviations]
 
+Key Points (4-6 bullets, mandatory; see ../templates/structure-common.md §Key points and Boxes)
+
 Introduction (flowing prose, ~10–15% of word count — NO sub-headings)
 
 [Background or Preliminaries section — optional, use only when needed]
@@ -24,7 +26,8 @@ Introduction (flowing prose, ~10–15% of word count — NO sub-headings)
 
 [... additional themes as needed, typically 3–6 total]
 
-Conclusion ((Final Section, Integrated))
+Outlook (final section — never "Conclusion")
+
 References
 ```
 
@@ -95,16 +98,16 @@ When a theme has a single coherent narrative, skip sub-headings entirely — wri
 
 ## Back matter
 
-**Conclusion ((Final Section, Integrated))** — a single combined section (final). See `../standards/writing-quality.md` §4.6 for the full structure, flow, and forbidden patterns. In brief: 2-4 flowing paragraphs (no sub-headings, no bullet points) moving through key bottlenecks → priority directions → optional cross-cutting enablers → closing statement. This IS the conclusion — nothing follows except references.
+**Outlook (展望)** — the review's single final section. See `../standards/writing-quality.md` §4.6 for the full structure, flow, and forbidden patterns. In brief: 2-4 flowing paragraphs (no sub-headings, no bullet points) moving through key bottlenecks → priority directions → optional cross-cutting enablers → closing statement. A review is secondary research, so this section is titled **Outlook**, never "Conclusion"/"结论". Nothing follows it except references.
 
 ## Drafting order
 
 To minimize reference renumbering overhead, draft sections in this order:
 
 1. **Thematic sections** (body first — these contain the most citations)
-2. **Conclusion ((Final Section, Integrated))** (final section)
+2. **Outlook (展望)** (final section)
 3. **Introduction** (written after body is complete — it contextualizes the themes)
-4. **Final assembly**: Title → Abstract → Keywords → [Abbreviations] → Introduction → Thematic sections → Conclusion ((Final Section, Integrated)) → References
-   - Write thematic sections and conclusion first, then insert Introduction between them and the front matter (title/abstract/keywords/abbreviations are prepended in step 7.5)
+4. **Final assembly**: Title → Abstract → Keywords → [Abbreviations] → Introduction → Thematic sections → Outlook → References
+   - Write thematic sections and the Outlook first, then insert Introduction between them and the front matter (title/abstract/keywords/abbreviations are prepended in step 7.5)
 
 The Introduction is written last because it must accurately contextualize the body's content and themes, which may shift during drafting.

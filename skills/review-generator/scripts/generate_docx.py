@@ -28,9 +28,29 @@ try:
     from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.oxml.ns import qn, nsdecls
     from docx.oxml import parse_xml, OxmlElement
+    MISSING_DOCX = False
 except ImportError:
-    print("python-docx is required. Install with: pip install python-docx")
-    sys.exit(1)
+    # Defer the hard failure to main() so that --help stays usable without the
+    # dependency. The inert stub keeps module-level construction (FONT_CONFIG)
+    # valid; it is never reached in a real run because main() exits first.
+    MISSING_DOCX = True
+
+    class _DocxStub:
+        """Inert stand-in for python-docx objects."""
+
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __call__(self, *args, **kwargs):
+            return self
+
+        def __getattr__(self, name):
+            return self
+
+    Document = _DocxStub()
+    Pt = Cm = _DocxStub()
+    WD_ALIGN_PARAGRAPH = WD_LINE_SPACING = WD_TABLE_ALIGNMENT = _DocxStub()
+    qn = nsdecls = parse_xml = OxmlElement = _DocxStub()
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +89,13 @@ FONT_CONFIG = {
 # ---------------------------------------------------------------------------
 # Markdown parsing
 # ---------------------------------------------------------------------------
+# An unordered list item. The canonical marker is the Markdown "- "; the
+# literal bullet glyphs are accepted so that a draft that already contains
+# them is still rendered as a Word bullet instead of as body text carrying a
+# stray character. See standards/writing-quality.md §12.
+BULLET_ITEM = re.compile(r"^([-+*•·])\s+(\S.*)$")
+
+
 def parse_markdown(md_text):
     """Parse markdown into a list of (type, content) tuples."""
     lines = md_text.split("\n")
@@ -147,13 +174,37 @@ def parse_markdown(md_text):
         if stripped.startswith(">"):
             stripped = stripped[1:].strip()
 
-        # Ordered / unordered list items (strip marker, treat as paragraph)
-        if re.match(r"^[\d]+\.\s", stripped) or stripped.startswith("- ") or stripped.startswith("* "):
-            stripped = re.sub(r"^[\d]+\.\s|^[-*]\s", "", stripped).strip()
+        # Ordered list item (strip marker, treat as paragraph)
+        if re.match(r"^\d+\.\s", stripped):
+            stripped = re.sub(r"^\d+\.\s", "", stripped).strip()
 
         # Horizontal rule (skip)
         if stripped in ("---", "***", "___"):
             i += 1
+            continue
+
+        # Unordered list item — becomes a Word bullet, never body text with a
+        # hard-coded bullet character in front of it
+        bullet = BULLET_ITEM.match(stripped)
+        if bullet:
+            item = bullet.group(2).strip()
+            j = i + 1
+            # Fold indented continuation lines into the same bullet so that a
+            # wrapped source line is not emitted as a separate paragraph.
+            while j < len(lines):
+                nxt = lines[j].rstrip()
+                nxt_stripped = nxt.strip()
+                if (not nxt_stripped or nxt_stripped.startswith(("#", "|"))
+                        or BULLET_ITEM.match(nxt_stripped)
+                        or re.match(r"^\d+[.)]", nxt_stripped)
+                        or nxt_stripped in ("---", "***", "___")):
+                    break
+                if not re.match(r"^[ \t]+", nxt):
+                    break
+                item += " " + nxt_stripped
+                j += 1
+            blocks.append(("bullet", item))
+            i = j
             continue
 
         # Image-only line — capture for docx embedding
@@ -163,8 +214,10 @@ def parse_markdown(md_text):
             i += 1
             continue
 
-        # Regular paragraph (collect multi-line paragraphs)
-        para_lines = [line]
+        # Regular paragraph (collect multi-line paragraphs). The first entry is
+        # the already-stripped line so that a blockquote or an ordered marker
+        # removed above does not reappear in the output.
+        para_lines = [stripped]
         j = i + 1
         while j < len(lines):
             next_line = lines[j].strip()
@@ -433,6 +486,28 @@ def generate_docx(blocks, output_path, lang="zh", input_dir=None):
         elif block_type == "table":
             add_table_to_doc(doc, content, config)
 
+        elif block_type == "bullet":
+            # A real Word bullet: the glyph is supplied by the list style, so
+            # wrapped lines stay aligned under the text and not under the margin.
+            try:
+                para = doc.add_paragraph(style="List Bullet")
+            except KeyError:
+                para = doc.add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            para.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+            para.paragraph_format.space_before = Pt(0)
+            para.paragraph_format.space_after = Pt(3)
+            para.paragraph_format.left_indent = Cm(0.74)
+            para.paragraph_format.first_line_indent = Cm(-0.74)
+            content = re.sub(r'!\[(.*?)\]\(.*?\)', r'\1', content)
+            render_config = config
+            # Chinese Key points use 楷体 (KaiTi) so they read as a distinct
+            # executive summary block rather than body prose in 宋体.
+            if lang == "zh":
+                render_config = dict(config)
+                render_config["body_font"] = "楷体"
+            add_runs_with_formatting(para, content, render_config)
+
         elif block_type == "paragraph":
             # Strip inline images — replace with alt text
             content = re.sub(r'!\[(.*?)\]\(.*?\)', r'\1', content)
@@ -564,8 +639,13 @@ FINAL_XLSX_HEADERS = ["Ref#", "Title", "Authors", "Journal", "Year", "Source DB"
 
 def create_final_xlsx(md_path, selected_papers_path, output_path):
     """Create literature_search.xlsx with only actually cited references."""
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+    except ImportError:
+        print("ERROR [RG-100] openpyxl is required for --final-xlsx. Install with: pip install openpyxl",
+              file=sys.stderr)
+        raise SystemExit(2)
 
     md_text = Path(md_path).read_text(encoding="utf-8")
     integrity = check_citation_integrity(md_text)
@@ -614,8 +694,13 @@ def create_final_xlsx(md_path, selected_papers_path, output_path):
 
 def create_selected_xlsx(selected_papers_path, output_path):
     """Create selected_papers.xlsx from selected_papers.json (all papers)."""
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Alignment, Font, PatternFill
+    except ImportError:
+        print("ERROR [RG-100] openpyxl is required for --final-xlsx. Install with: pip install openpyxl",
+              file=sys.stderr)
+        raise SystemExit(2)
 
     records = json.loads(Path(selected_papers_path).read_text(encoding="utf-8"))
     if not records:
@@ -671,6 +756,11 @@ def main():
     parser.add_argument("--final-xlsx", action="store_true",
                         help="Create literature_search.xlsx + selected_papers.xlsx (requires selected_papers.json in input-dir)")
     args = parser.parse_args()
+
+    if MISSING_DOCX:
+        print("ERROR [RG-100] python-docx is required. Install with: pip install python-docx",
+              file=sys.stderr)
+        raise SystemExit(2)
 
     if args.input_dir:
         # Auto-detect and process both files

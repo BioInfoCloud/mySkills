@@ -30,7 +30,7 @@ After Pass 1 of filter_relevant.py produces the auto-ranked list:
 1. **Read all abstracts** from the auto-ranked candidates (typically 150-200 papers)
 2. **Score each paper** on all six dimensions
 3. **Sort by total score**, descending
-4. **Select top N**: 60-150 for comprehensive/narrative, 100-250 for SOTA, 40-80 for critical/perspective
+4. **Select top N**: 100-200 for comprehensive/narrative, 100-250 for SOTA, 60-100 for critical/perspective. These are target ranges; if the candidate pool is exhausted below the type-dependent minimum, the lower bound may be relaxed with a quality note in the output notes.
 5. **Validate coverage**: check that all review themes have representation. If a core theme is underrepresented, lower the threshold for papers in that theme.
 6. **Run filter_relevant.py Pass 2** with `--keep-indices` for the selected papers
 
@@ -68,3 +68,15 @@ After scoring the first batch, sanity-check the distribution:
 - If top papers consistently score 85+, the rubric is too loose — re-read the abstracts more carefully
 - If no paper breaks 50, either the search queries were wrong (re-run step 3) or the topic is too niche (proceed with available literature)
 - The score spread between rank 1 and rank 60 should be meaningful — if all papers cluster in a 10-point band, the dimensions aren't discriminating enough; re-read abstracts and differentiate more aggressively on dimensions 1 and 3
+
+## Post-screening quality gate (run after selection, before deep analysis)
+
+After the final selection, verify each dimension below before proceeding to deep analysis:
+
+- [ ] **Topic scope**: Are there 5+ distinct sub-topics? Consider narrowing to 2-4 core themes for depth.
+- [ ] **Literature recency**: Median publication year of the top 30 papers falls within the past 3-5 years for active fields.
+- [ ] **Frontier coverage**: Papers from the past 1-2 years are ≥20% of the selected set in active fields.
+- [ ] **Evidence sufficiency**: ≥100 relevant papers for comprehensive reviews, ≥100 for SOTA reviews. Record a quality note if below threshold after all broadening attempts.
+- [ ] **Structure ratio**: Frontier research from the past 3-5 years ≥60%, classic foundational work 10-20%, the remainder contextual.
+- [ ] **Quality composition**: Papers from top-tier and Q1/Q2 journals dominate. Preprints excluded for biomedical/cross/general, or minimized and marked for CS/AI.
+- [ ] **Database diversity**: Papers sourced from ≥3 databases.

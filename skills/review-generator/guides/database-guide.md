@@ -1,5 +1,16 @@
 # Database search guide
 
+**Quick index** — the per-database sections are self-contained, so load only what the current step needs.
+
+| If you need to… | Go to |
+|-----------------|-------|
+| Decide which databases to search | Database selection principle, Domain-to-database mapping |
+| Call a specific API (endpoints, params, rate limits) | the Tier 1 / Tier 2 section for that database |
+| Fetch full text for key papers | PMC (PubMed Central) |
+| Build or broaden queries | Query construction best practices |
+| Run the search script | multi_db_search.py invocation |
+| Compare coverage and licence terms | Database comparison |
+
 ## Database selection principle
 
 **Quality over quantity. Peer-reviewed literature is the foundation.** Preprint servers (bioRxiv, medRxiv, Research Square) are excluded from automated search. Only databases with free, publicly accessible APIs are used.
@@ -49,18 +60,25 @@ Keys are read from environment variables by `multi_db_search.py` using `os.envir
 
 PubMed search returns article metadata and abstracts. For important papers, retrieve the **full text** from PMC when available. The efetch API supports `rettype=xml` for structured full-text XML.
 
-**When to retrieve full text** (token-efficient selective retrieval):
-- Papers classified as **Tier 1** in the quality tier system (Nature/Science/Cell/NEJM/Lancet-level)
-- **Landmark/foundational papers** that anchor a section
-- Papers where the **abstract is insufficient** to extract the 9 analysis fields
-- Papers that are **central to resolving a controversy** identified in the literature
+**When to retrieve full text** (token-efficient selective retrieval). Retrieve for papers that qualify under ANY of these criteria:
+1. **Thematic centrality**: papers that provide key evidence for a review theme, resolve a controversy, or establish a foundational concept, regardless of journal.
+2. **Tier 1 journal** (always retrieve): Nature, Science, Cell, NEJM, Lancet, JAMA and their flagship sub-journals.
+3. **Landmark or controversy-resolving**: papers that changed the field's direction or that the review's argument hinges on.
+4. **Quantitative data source**: papers from which specific numbers, fold-changes, or statistical values are cited (require exact verification against source text).
 
-**Do NOT** retrieve full text for all candidate papers — this wastes tokens. For most papers (70-80%), the abstract is sufficient for screening and analysis.
+**Do NOT** retrieve full text for all candidate papers; this wastes tokens. For most papers (70-80%), the abstract is sufficient for screening and analysis (the abstract covers the 9-field extraction for all but the few papers whose design detail matters).
 
-**Full-text retrieval command** (for a paper with a PMCID):
+**Use the NCBI ID converter to get a PMCID from a PMID:**
 ```
-https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=PMC1234567&rettype=xml
+https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=<pmid>&format=json
 ```
+
+**Fetch full text:**
+```
+https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=<pmcid>&rettype=xml
+```
+
+**If a paper lacks a PMID** (common for OpenAlex/Semantic Scholar results): search the title on PubMed via E-utilities to find the PMID. If no PubMed entry exists, skip PMC retrieval for that paper and use the abstract only.
 
 **Critical: full-text citation awareness**
 When reading full text, distinguish carefully:
@@ -68,12 +86,12 @@ When reading full text, distinguish carefully:
 | Text type | Contains | Trust for |
 |-----------|----------|-----------|
 | **The paper's own results/discussion** | Primary data, the authors' own interpretations | The paper's findings and conclusions |
-| **Introduction / background** | Citations to OTHER papers' findings | DO NOT attribute to this paper — these are other people's results |
-| **Discussion references to prior work** | Contextual comparisons with other studies | DO NOT attribute to this paper — these are comparisons |
+| **Introduction / background** | Citations to OTHER papers' findings | DO NOT attribute to this paper; these are other people's results |
+| **Discussion references to prior work** | Contextual comparisons with other studies | DO NOT attribute to this paper; these are comparisons |
 
-**Rule**: If a sentence in the full text is attributed to another paper (e.g., "Smith et al. showed that X..."), it is NOT this paper's finding. Only extract claims from the Results and Discussion sections that the authors present as their own work. Cross-check against the abstract, which summarizes only the paper's own contributions.
+**Rule**: If a sentence in the full text is attributed to another paper (e.g., "Smith et al. showed that X..."), it is NOT this paper's finding. Only extract claims from the Results and Discussion sections that the authors present as their own work. Cross-check against the abstract, which summarizes only the paper's own contributions. Do not use full-text retrieval to fabricate deeper knowledge; if the PMC full text is unavailable, the abstract is sufficient.
 
-Do not use full-text retrieval to fabricate deeper knowledge — if the PMC full text is unavailable, the abstract is sufficient.
+Save extracted insights to `<topic_slug>/_pmc_notes.md`. This temporary file is merged into `analysis_output.md` during deep analysis.
 
 ---
 
@@ -236,40 +254,3 @@ Add `--years <YYYY-YYYY>` only when restricting date range (omit to search all y
 2. **Use controlled vocabulary**: MeSH terms for PubMed, keyword expansion for Europe PMC.
 3. **Include synonyms**: Different communities use different terminology for the same concept.
 4. **Log every query** to `search_queries.md` for full traceability.
-5. **Iterate**: <10 results = broaden. >500 results = narrow with qualifiers.
-
-## PMC full-text retrieval strategy (token-efficient)
-
-After screening and selecting papers, retrieve full text for papers that qualify under **any** of these criteria:
-
-1. **Thematic centrality**: Papers that provide key evidence for a review theme, resolve a controversy, or establish a foundational concept — regardless of journal.
-2. **Tier 1 journal** (always retrieve): Papers from Nature, Science, Cell, NEJM, Lancet, JAMA and their flagship sub-journals.
-3. **Landmark or controversy-resolving**: Papers that changed the field's direction or that the review's argument hinges on.
-4. **Quantitative data source**: Papers from which specific numbers, fold-changes, or statistical values are cited (require exact verification against source text).
-
-Use the NCBI ID converter to get PMCID from PMID:
-```
-https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=<pmid>&format=json
-```
-Fetch full text:
-```
-https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pmc&id=<pmcid>&rettype=xml
-```
-
-**If a paper lacks a PMID** (common for OpenAlex/Semantic Scholar results): search the title on PubMed via E-utilities to find the PMID. If no PubMed entry exists, skip PMC retrieval for that paper — use the abstract only.
-
-### Critical: full-text citation awareness
-
-When reading full text, distinguish carefully:
-
-| Text type | Contains | Trust for |
-|-----------|----------|-----------|
-| **The paper's own results/discussion** | Primary data, the authors' own interpretations | The paper's findings and conclusions |
-| **Introduction / background** | Citations to OTHER papers' findings | DO NOT attribute to this paper |
-| **Discussion references to prior work** | Contextual comparisons with other studies | DO NOT attribute to this paper |
-
-**Rule**: If a sentence in the full text is attributed to another paper (e.g., "Smith et al. showed that X..."), it is NOT this paper's finding. Only extract claims from the Results and Discussion sections that the authors present as their own work.
-
-Save extracted insights to `<topic_slug>/_pmc_notes.md`. This temporary file will be merged into `analysis_output.md` during deep analysis.
-
-This gives deep analysis where it matters most without wasting tokens on marginal papers (~70-80% of papers use abstract only).

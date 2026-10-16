@@ -40,7 +40,7 @@ For every selected paper (after preprint filtering), extract these 9 fields into
 | 局限性 | Limitations acknowledged or identifiable | In vitro only; no in vivo validation; small sample (n=3); English-only evaluation; no human evaluation |
 | 适用边界 | Scope conditions: what this evidence proves and does NOT prove | Demonstrates correlation but not causality; Works for languages with Latin script, not tested on CJK |
 | 作者结论 | The authors' own summary of what their data mean | RNH1 is a physiological brake on NLRP3 inflammasome; Mixture-of-experts routing achieves Pareto-optimal accuracy-efficiency trade-off |
-| **Source quality** (NEW) | Journal tier, peer-review status, any caveats | Tier 1 (Nature); Tier 2 (eLife); arXiv preprint (not peer-reviewed) — keep for CS/AI only |
+| **Source quality** | Journal tier, peer-review status, any caveats | Tier 1 (Nature); Tier 2 (eLife); arXiv preprint (not peer-reviewed) — keep for CS/AI only |
 
 ## 3. Batch categorization and clustering
 
@@ -74,7 +74,7 @@ Groups based on the strength of the evidence:
 - Tier 3: Solid peer-reviewed, limitations acknowledged
 - Tier 4 (CS/AI only): arXiv preprints — lower weight in analysis, flagged
 
-### Dimension E: Application scenario (NEW)
+### Dimension E: Application scenario
 Groups based on real-world context:
 - In vitro (cell lines, primary cells, biochemical assays)
 - In vivo animal (mouse, zebrafish, C. elegans, primate)
@@ -144,7 +144,7 @@ Based on ALL analysis above, identify gaps using these criteria:
 | Controversial | Multiple studies with conflicting results, no resolution | RNH1 as antioxidant vs. sentinel: conflicting evidence |
 | Methodologically weak | Existing studies have critical flaws limiting interpretation | All in vitro, no in vivo validation of mechanism |
 | No translation | Clear mechanism in models but no human validation | ANG-RNH1 axis in ALS: animal data strong, human data absent |
-| **Evidence quality gap** (NEW) | Field dominated by low-tier evidence | Most studies are small-N, single-center, without replication |
+| **Evidence quality gap** | Field dominated by low-tier evidence | Most studies are small-N, single-center, without replication |
 
 Each gap must be:
 - **Grounded**: Traceable to specific papers or their documented absence in the selected set
@@ -157,6 +157,7 @@ Each gap must be:
 - In `analysis_output.md`: label factual claims as `[EVIDENCE]` and your commentary as `[ANALYSIS]` to keep them separate during analysis.
 - **In the final review text**: remove ALL `[EVIDENCE]`, `[ANALYSIS]`, and similar internal markers. The final review must read as natural academic prose with 述评结合, not annotated notes.
 - Never fabricate a numerical result, p-value, fold-change, sample size, or benchmark score.
+- **Mark inferred vs read**: When a 9-field value (most often 实验方案 or 局限性) rests on inference rather than the paper's own reporting, label it `[INFERRED]` in `analysis_output.md`. An `[INFERRED]` detail must never be carried into the review text as though the paper stated it. If a field cannot be sourced, leave it blank rather than guessing.
 - Never attribute a claim to a paper that does not contain it.
 - **Cross-verify key claims**: For critical findings (large effect sizes, paradigm-shifting claims), verify against at least one other database (PubMed + Crossref, or OpenAlex + Semantic Scholar).
 
@@ -167,7 +168,7 @@ During analysis, assess:
 - **Age structure**: Distribution of selected papers by year. Plot or describe distribution. Identify gaps (e.g., 2023 has only 2 papers — why?).
 - **Superseded findings**: Are any cited conclusions contradicted by newer studies? Flag and note the newer contrary evidence in `analysis_output.md`.
 - **Outdated methods**: Are papers using obsolete technologies cited without acknowledging limitations?
-- **Frontier ratio**: What fraction of selected papers are from the past 2 years? If <15% in an active field, flag for targeted update queries.
+- **Frontier ratio**: What fraction of selected papers are from the past 2 years? If <20% in an active field, flag for targeted update queries (matching the ≥20% frontier-coverage target in `scoring-system.md` §Post-screening quality gate).
 - **Quality structure**: What fraction are Tier 1 vs Tier 2 vs Tier 3 vs Tier 4? If >30% Tier 3-4, consider expanding search or warning user.
 
 Flag any paper whose key result has been retracted, corrected, or seriously questioned. Mark these in the analysis as `[CAUTION: retracted/superseded/questioned]`.
@@ -184,3 +185,20 @@ The `analysis_output.md` file must contain, in order:
 6. **Research Gaps** — all identified gaps with grounding, specificity, actionability, priority
 7. **Timeliness and Quality Assessment** — age distribution, frontier ratio, quality tier distribution
 8. **Drafting Recommendations** — key patterns, strongest evidence, most interesting gaps that should anchor the review
+
+## Deep-analysis quality gate (run after analysis, before drafting)
+
+Before drafting, verify:
+
+- [ ] **Single-paper extraction**: All 9 fields extracted for every selected paper
+- [ ] **Multi-dimension clustering**: Papers clustered by method, perspective, conclusion direction, evidence quality tier, AND application scenario (5 dimensions)
+- [ ] **Horizontal comparison**: ≥1 comparison table per cluster with systematic contrast
+- [ ] **Discrepancy analysis**: For each contradiction, a plausible explanation is proposed
+- [ ] **Collective limitations**: Field-wide weaknesses separated from paper-specific issues
+- [ ] **Grounded gaps**: Every research gap traces to specific papers or their absence
+- [ ] **Gap specificity**: Each gap is concrete and actionable, e.g. "no study has examined X in Y context" rather than "more research needed"
+- [ ] **Timeliness assessment**: Age distribution checked; superseded findings flagged
+- [ ] **Evidence/analysis separation**: `[EVIDENCE]` and `[ANALYSIS]` labeled in `analysis_output.md` per §7, and stripped from the final text
+- [ ] **No fabricated data**: Every claim has a traceable source paper; inferred 9-field values carry the `[INFERRED]` mark
+- [ ] **Analysis output structure**: `analysis_output.md` follows the section order defined above
+- [ ] **Sufficiency gate**: ≥100 papers for comprehensive/narrative, ≥100 for SOTA (target 100–250), ≥60 for critical/perspective. If below the type-dependent threshold, broaden scope automatically by re-running with relaxed filters or adding databases. If all reasonable options are exhausted, the lower bound may be relaxed; record a quality note in the output notes and proceed.

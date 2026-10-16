@@ -15,10 +15,20 @@ Usage:
     python multi_db_search.py --topic "transformer architecture NLP" --output-dir ./search_results
                               --domain cs_ai
 
+    # Resume an interrupted run: skips (topic, database) pairs already finished
+    python multi_db_search.py --topics "..." "..." --output-dir ./search_results --resume
+
     # API keys via environment variables:
     #   NCBI_API_KEY     (PubMed, for higher rate limits)
     #   IEEE_API_KEY     (IEEE Xplore)
     #   DIMENSIONS_API_KEY (Dimensions.ai)
+
+Reliability:
+    Every database call is wrapped in exponential-backoff retry (--max-attempts,
+    default 4). Run state is checkpointed to <output-dir>/search_progress.json
+    after each (topic, database) pair, so --resume continues instead of restarting.
+    Failures are reported with stable RG-xxx codes; --error-report writes them to
+    JSON and --strict turns partial failures into a non-zero exit.
 """
 
 import argparse, json, os, re, sys, time, xml.etree.ElementTree as ET
@@ -27,17 +37,27 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from _errors import (EXIT_BY_CODE, error, fail, retry_call, run_guarded,
+                         summary_line, warn, write_report)
+except ImportError:  # running from a copied location: fall back to sibling lookup
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from _errors import (EXIT_BY_CODE, error, fail, retry_call, run_guarded,
+                         summary_line, warn, write_report)
+
+try:
     import requests
 except ImportError:
-    print("requests is required. Install with: pip install requests")
-    sys.exit(1)
+    fail("RG-100", "requests is required but not installed",
+         "Install it with: pip install requests")
 
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 except ImportError:
-    print("openpyxl required for Excel export. Install: pip install openpyxl")
-    sys.exit(1)
+    fail("RG-100", "openpyxl is required but not installed",
+         "Install it with: pip install openpyxl")
+
+CHECKPOINT_VERSION = 1
 
 
 NCBI_API_KEY = os.environ.get("NCBI_API_KEY", "")
@@ -51,6 +71,38 @@ USER_AGENT = "ReviewGenerator/1.0 (https://github.com/anomalyco/review-generator
 # ---------------------------------------------------------------------------
 def _norm_title(title: str) -> str:
     return re.sub(r"[^a-z0-9]", "", title.lower().strip())[:60]
+
+
+# ---------------------------------------------------------------------------
+# Checkpoint / resume support
+# ---------------------------------------------------------------------------
+def _checkpoint_path(output_dir: str) -> Path:
+    return Path(output_dir) / "search_progress.json"
+
+
+def _load_checkpoint(output_dir: str) -> dict:
+    """Load a previous run's state. Returns {} when absent or unusable."""
+    path = _checkpoint_path(output_dir)
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        warn("RG-102", f"ignoring unreadable checkpoint ({exc})",
+             "The run restarts from scratch; delete search_progress.json to silence this.")
+        return {}
+    if not isinstance(data, dict) or data.get("version") != CHECKPOINT_VERSION:
+        return {}
+    return data
+
+
+def _save_checkpoint(output_dir: str, state: dict) -> None:
+    """Atomically persist run state so an interrupted run can be resumed."""
+    state["version"] = CHECKPOINT_VERSION
+    path = _checkpoint_path(output_dir)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(path)
 
 # ---------------------------------------------------------------------------
 # PubMed
@@ -291,7 +343,7 @@ def _parse_crossref(items: list) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# OpenAlex (NEW) — Free, open, 254M+ works, all disciplines
+# OpenAlex — Free, open, 254M+ works, all disciplines
 # ---------------------------------------------------------------------------
 def search_openalex(query: str, max_results: int = 50, years: str = "") -> list[dict]:
     base = "https://api.openalex.org/works"
@@ -360,7 +412,7 @@ def _parse_openalex(results: list) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Europe PMC (NEW) — Life sciences, 41M+ abstracts, 8M+ full-text OA articles
+# Europe PMC — Life sciences, 41M+ abstracts, 8M+ full-text OA articles
 # ---------------------------------------------------------------------------
 def search_europe_pmc(query: str, max_results: int = 50, years: str = "") -> list[dict]:
     base = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
@@ -410,7 +462,7 @@ def _parse_europe_pmc(results: list) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Dimensions.ai (NEW) — 140M+ publications, grants, patents, clinical trials
+# Dimensions.ai — 140M+ publications, grants, patents, clinical trials
 # Requires DIMENSIONS_API_KEY environment variable
 # ---------------------------------------------------------------------------
 def search_dimensions(query: str, max_results: int = 50, years: str = "",
@@ -511,7 +563,7 @@ def _parse_dblp(hits: list) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# IEEE Xplore (NEW) — Requires API key (env: IEEE_API_KEY)
+# IEEE Xplore — Requires API key (env: IEEE_API_KEY)
 # ---------------------------------------------------------------------------
 def search_ieee(query: str, max_results: int = 50, years: str = "",
                 api_key: str = "") -> list[dict]:
@@ -677,13 +729,24 @@ def main():
                         help="IEEE Xplore API key (or set IEEE_API_KEY env var)")
     parser.add_argument("--topics", nargs="+", default=None,
                         help="Multiple search topics (alternative to --topic). Runs each topic separately and merges results.")
+    parser.add_argument("--resume", action="store_true",
+                        help="Reuse search_progress.json: skip (topic, database) pairs already completed and continue")
+    parser.add_argument("--max-attempts", type=int, default=4,
+                        help="Attempts per database call before giving up (default 4)")
+    parser.add_argument("--error-report", default="",
+                        help="Write a JSON issue report to this path (e.g. ./<topic_slug>/search_errors.json)")
+    parser.add_argument("--strict", action="store_true",
+                        help="Treat partial-source failures and low result counts as fatal (exit 3)")
     args = parser.parse_args()
+
+    if args.max_attempts < 1:
+        fail("RG-103", f"--max-attempts must be >= 1, got {args.max_attempts}")
 
     # Support multiple topics
     topics = args.topics if args.topics else ([args.topic] if args.topic else [])
     if not topics:
-        print("Error: Either --topic or --topics must be provided.")
-        sys.exit(1)
+        fail("RG-100", "either --topic or --topics must be provided",
+             'Example: --topics "RNH1 gene function" "ribonuclease inhibitor cancer"')
 
     # Determine databases
     if args.databases:
@@ -712,7 +775,20 @@ def main():
         print(f"  [{i+1}] {t}")
     print()
 
-    all_articles = []
+    all_articles: list[dict] = []
+    state: dict = {}
+    completed: dict = {}
+    if args.resume:
+        state = _load_checkpoint(args.output_dir)
+        completed = state.get("completed", {})
+        all_articles = list(state.get("articles", []))
+        if completed:
+            print(f"Resuming: {len(completed)} (topic, database) pair(s) already complete, "
+                  f"{len(all_articles)} article(s) carried over.")
+    state.update({"topics": topics, "databases": db_list, "domain": args.domain,
+                  "years": args.years, "max_per_db": args.max_per_db})
+    state["completed"] = completed
+    state["articles"] = all_articles  # aliased: checkpoint always mirrors the live list
 
     search_fn = {
         "pubmed": lambda q: fetch_pubmed_details(
@@ -733,23 +809,40 @@ def main():
             q, args.max_per_db, args.years),
     }
 
+    attempted = 0
+    failed_sources: list[str] = []
+
     for topic_idx, topic in enumerate(topics):
         print(f"=== Topic [{topic_idx+1}/{len(topics)}]: {topic} ===")
         for db_name in db_list:
             fn = search_fn.get(db_name)
             if not fn:
-                print(f"[{db_name.capitalize()}] Unknown database, skipped")
+                warn("RG-100", f"unknown database '{db_name}', skipped",
+                     f"Valid names: {', '.join(sorted(search_fn))}")
+                continue
+            pair_key = f"{topic_idx}|{db_name}"
+            if args.resume and pair_key in completed:
+                print(f"[{db_name.capitalize()}] skipped — already completed "
+                      f"({completed[pair_key].get('count', 0)} article(s))")
                 continue
             print(f"[{db_name.capitalize()}] Searching...")
+            attempted += 1
             try:
-                articles = fn(topic)
-                print(f"  Found {len(articles)} articles")
-                if len(articles) == 0:
-                    print(f"  WARNING: {db_name} returned 0 results for '{topic[:60]}...'")
-                    print(f"  TIP: Try shorter, more focused queries (2-3 keywords)")
-                all_articles.extend(articles)
-            except Exception as e:
-                print(f"  Error: {e}")
+                articles = retry_call(lambda: fn(topic), label=db_name,
+                                      attempts=args.max_attempts, base_delay=1.5)
+            except Exception as exc:  # noqa: BLE001 - classified as RG-400 below
+                failed_sources.append(f"{db_name} ({exc.__class__.__name__}: {exc})")
+                error("RG-400",
+                      f"{db_name}: {args.max_attempts} attempt(s) exhausted ({exc})",
+                      "Re-run with the same --resume command to continue from the checkpoint.")
+                continue
+            print(f"  Found {len(articles)} articles")
+            if len(articles) == 0:
+                warn("RG-202", f"{db_name} returned 0 results for '{topic[:60]}'",
+                     "Try shorter, more focused queries (2-3 keywords).")
+            all_articles.extend(articles)
+            completed[pair_key] = {"count": len(articles), "topic": topic, "db": db_name}
+            _save_checkpoint(args.output_dir, state)
 
     # Deduplicate
     total = len(all_articles)
@@ -792,14 +885,35 @@ def main():
 
     # Zero-result warning
     if len(all_articles) < 20:
-        print(f"\nWARNING: Only {len(all_articles)} articles found (< 20).")
-        print("TIP: Try the following strategies:")
-        print("  1. Use --topics with multiple shorter queries instead of one long --topic")
-        print("     Example: --topics 'RNH1 gene function' 'ribonuclease inhibitor cancer' 'RNH1 angiogenin'")
-        print("  2. Remove year restrictions (omit --years)")
-        print("  3. Use more general keywords or synonyms")
-        print("  4. Add more databases with --databases pubmed openalex crossref semantic_scholar")
+        warn("RG-202", f"only {len(all_articles)} articles found (< 20)",
+             "Try these strategies: (1) --topics with several short queries, "
+             "(2) drop --years, (3) use broader synonyms, "
+             "(4) add --databases pubmed openalex crossref semantic_scholar")
+
+    # Source-health classification and machine-readable report
+    all_failed = bool(attempted) and len(failed_sources) == attempted
+    if all_failed:
+        error("RG-200", f"every data source failed ({attempted} attempted)",
+              "Check network access and API keys, then re-run with --resume.")
+    elif failed_sources:
+        warn("RG-201", f"{len(failed_sources)}/{attempted} data source(s) failed: "
+                       + "; ".join(failed_sources),
+             "Results are partial; re-run with --resume to retry the failed sources.")
+
+    if args.error_report:
+        report = write_report(args.error_report)
+        if report:
+            print(f"Saved issue report: {report}")
+
+    print(f"\n{summary_line()}")
+
+    if all_failed:
+        raise SystemExit(EXIT_BY_CODE["RG-200"])
+    if args.strict and failed_sources:
+        error("RG-203", "--strict: partial source failure is fatal",
+              "Re-run without --strict to accept partial results.")
+        raise SystemExit(EXIT_BY_CODE["RG-203"])
 
 
 if __name__ == "__main__":
-    main()
+    run_guarded(main)

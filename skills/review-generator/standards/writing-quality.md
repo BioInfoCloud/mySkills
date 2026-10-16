@@ -4,19 +4,46 @@
 
 ---
 
+## Quick index — load by need, not front to back
+
+This file is dense by design. On a first pass only §1–§4 and §7 are needed; consult the rest when a specific symptom appears.
+
+| If you need to… | Go to |
+|-----------------|-------|
+| Establish the review's thesis and per-section anchors | §1 |
+| Fix sentence rhythm, paragraph size, or parenthetical load | §11 |
+| Fix list markers, Key points notation, or bullet rendering | §12 |
+| Fix paragraph-level argument (evidence + critical comparison) | §2.1 |
+| Remove paper-serializing / 流水账 patterns | §2.2 |
+| Set citation density | §2.3 |
+| Decide whether the draft is ready to be written | §2.4 |
+| Apply global rules: subject, hedging, narrative drive, accessibility, tone, citation integrity | §3.1–§3.6 |
+| Fix punctuation, dashes, and formatting | §3.7 |
+| Write the abstract, keywords, title, introduction, body, or Outlook | §4.1–§4.6 |
+| Adapt for biomedical, CS/AI, or interdisciplinary work | §5 |
+| Audit the reference list | §6 |
+| Run the pre-delivery gate (Gates 1–5) | §7 |
+| Diagnose AI register, monotony, or runaway structure | §8 |
+| Run the self-audit before translation | §9 |
+| Appraise a narrative review with SANRA | §10 |
+
+---
+
 ## 1. Pre-writing: the evidence framework
 
 Before writing prose, define the review's thesis — a specific intellectual contribution beyond "here's what we know." Write it in 1-2 sentences. Every section must serve this thesis.
 
 For each planned section, anchor it with key papers, note agreements/disagreements, identify comparison dimensions, and define the section's conclusion. Define explicit scope boundaries: what's covered and what's excluded (and why).
 
-> **Literature screening QC and deep analysis QC have been moved to `guides/literature-quality-gates.md`. Load that file at the appropriate workflow steps instead.**
+> **Literature screening QC lives in `standards/scoring-system.md` §Post-screening quality gate; deep-analysis QC lives in `guides/deep-analysis.md` §Deep-analysis quality gate. Load each at its corresponding workflow step.**
 
 ---
 
 ## 2. The 述评结合 standard (Evidence + Critical Commentary)
 
-**This is the defining quality of a high-impact review.** Nature Reviews editors reject manuscripts that merely catalog findings without analytical synthesis. Every paragraph that cites research must do ALL of the following:
+**This is the defining quality of a high-impact review.** Nature Reviews editors reject manuscripts that merely catalog findings without analytical synthesis. Every paragraph that cites research must reach the three beats below. They describe the argumentative arc the paragraph earns, not a fixed sentence-by-sentence template: paragraph length and internal structure should vary, and applying an identical three-part mould to every paragraph is itself a defect (see §8, "AI register").
+
+The review must **analyze the literature, not merely report it** — and it must **draw and state substantive conclusions from that literature**. A review's value lies in the judgments it reaches by synthesizing many studies, not in the studies it lists; a conclusion grounded in the synthesis of multiple cited papers is properly supported, not "unsupported", and must not be withheld for fear of seeming speculative. Weigh the evidence, then commit to a position and defend it. Two scaffolds are forbidden in the prose of every section (abstract, body, and Outlook): (1) **structural self-description** — narrating how the review is organized (e.g., "这种组织方式遵循证据而非惯例：每一节都建立在前一节之上，使转化结论立足于机制基础。" / "each section builds on the previous one"); (2) **evidence-listing lead-ins** — a meta-sentence that announces a bare list without analysis (e.g., "本综述整合如下证据：" / "this review integrates the following evidence:"). The review states findings and their synthesis; it never narrates its own architecture or method.
 
 ### 2.1 The three-part paragraph structure
 
@@ -53,6 +80,8 @@ These patterns signal a weak review and MUST be avoided:
 | Vague attribution | "Multiple studies have shown..." without specific citations | Not verifiable. Must cite specific papers. |
 | Citation desert (引用真空) | A paragraph of 4+ sentences with zero citations, or a long paragraph where ALL citations are clustered at the final sentence. | Claims lack traceability. Every substantive factual claim needs a citation near where it appears, not deferred to the end. |
 | End-only citation dump | A paragraph making 3+ distinct factual claims, with citations e.g. "[23-27]" appearing only at the end. | Reader cannot determine which citation supports which claim. Distribute citations throughout the paragraph, placed immediately after each claim they support. |
+| Structural self-description (结构自述) | "这种组织方式遵循证据而非惯例：每一节都建立在前一节之上，使转化结论立足于机制基础。" / "Each section builds on the previous one, so the translational claim rests on a mechanistic base." | Describes the review's own architecture instead of presenting science. A review states findings and their synthesis; it never narrates how it is organized. Forbidden in every section. |
+| Evidence-listing lead-in (证据罗列引导句) | "本综述整合如下证据：" / "This review integrates the following evidence:" | A mechanical signpost that announces a bare list without analysis. Synthesize inline; never prefix an enumeration with a meta-sentence. |
 
 ### 2.3 Citation density rule (引用密度规则)
 
@@ -76,6 +105,14 @@ Every body paragraph must have citations **distributed throughout**, not cluster
   **Correct citation sequence example:**
 
   Acute lung injury/acute respiratory distress syndrome (ALI/ARDS) represents a life-threatening progressive disorder characterized by a triphasic disease progression consisting of exudative, proliferative, and fibrotic phases [1,2]. The initial exudative phase (≤7 days post-injury) stems from endothelial dysfunction, while later stages feature collagen deposition and epithelial cells (ECs) damage leading to pulmonary fibrosis (PF), a form of interstitial lung disease (ILD) [3-5]. This fibrotic transformation, marked by irreversible extracellular matrix (ECM) accumulation, impairs gas exchange and drives poor outcomes [3,6], underscoring the critical need for effective interventions. Mechanical ventilation (MV) remains a critical intervention for managing ARDS, yet it paradoxically contributes to ventilator-induced lung injury and accelerates PF development [7,8]. Clinically, PF was detected in open-lung biopsies from 53% of patients ventilated ≥5 days [9]. Prolonged ventilation (>12 days) was associated with a 64% incidence of PF and 57% mortality [10]. Unlike chronic ILD (e.g., idiopathic pulmonary fibrosis [IPF]), which develops over years, MV-induced PF represents a rapidly progressive form of acute ILD driven by mechanical stress and resulting in accelerated ECM deposition.
+
+### 2.4 Synthesis citations and writing qualification (撰写资格)
+
+A review earns its citations by analysis, not by attaching a marker after every sentence. Two rules govern how many papers back a claim:
+
+- **Multi-paper backing for general claims.** Consensus trends, prevalence, "widely observed" effects, and comparative statements MUST be supported by ≥2–3 papers, expressed as a grouped citation such as `[23-26]` or `[23,24,27]` whose shared finding those papers actually report. Single-paper citations are reserved for specific, unique findings that only one study reports (a particular Kd, a specific mutation, a single cohort result). A review in which nearly every citation is a lone `[N]` reads as a paper-by-paper log rather than a synthesis. Aim for a healthy mix: most thematic paragraphs should contain at least one multi-paper grouping.
+- **Writing qualification (撰写资格).** A sentence earns its citation only when the cited paper(s) actually report the claim it makes. A broad survey statement with a single citation, or with no citation, is under-qualified: either add the supporting papers, or reframe it explicitly as the reviewer's own synthesis (which then needs no citation). Never attach a lone citation to a general claim merely to look sourced. **Caveat**: this rule targets ungrounded assertions with no evidentiary basis — it does NOT forbid legitimate synthesis. A substantive conclusion that integrates and extends several cited studies (e.g., "Across [23-29], X emerges as the dominant driver of Y, though Z modulates it in cell type A") is the review's core contribution and must be stated boldly, with the evidence it rests on made explicit. Do not retreat into a claim-free summary to avoid scrutiny.
+- **Report the shared finding.** A grouped citation must state what the grouped papers found or how they relate — never `[12-19]` alone (see §2.2, "Citation stacking without synthesis"). "`X is consistently observed [23-26]`" is valid only if all four papers report X.
 
 **Example 1: Biomedical (molecular mechanism)**
 
@@ -131,18 +168,19 @@ These rules apply to EVERY sentence in the review, both English and Chinese:
 - **Citation supports the claim**: Every citation must genuinely be the source of the statement it's attached to. Never insert a citation because a paper exists on the topic — only cite when that specific paper reports the finding, makes the argument, or provides the data described in the sentence.
 - **No decorative citations**: A citation must serve a purpose. Don't sprinkle `[X]` after statements to "look cited." If a claim doesn't need a citation (it's common knowledge or your own synthesis), don't force one.
 - **Exact claim matching**: "RNH1 binds IRE1α with Kd of 15 nM [23]" means paper [23] actually measured and reported that Kd. If paper [23] reported a different value or studied a different protein, it's a wrong citation.
-- **Summarized claims**: When summarizing across papers, all papers in the range must genuinely report the claim: "X is consistently observed [23-26]" means ALL of [23],[24],[25],[26] report X. Spot-check 20% of your citations against source abstracts before delivery.
+- **Summarized claims**: When summarizing across papers, all papers in the range must genuinely report the claim: "X is consistently observed [23-26]" means ALL of [23],[24],[25],[26] report X. Before delivery, verify every quantitative claim and spot-check at least 30% of the remaining citations against source abstracts.
 - **No AI-hallucinated citations**: Never generate citation metadata from memory. Every citation's DOI, PMID, author names, and journal must come from the search results or verified crossref lookup.
 
 ### 3.7 Punctuation and formatting (标点规范)
-- **Restrict em dashes**: English: at most 1-2 em dashes total in the entire review. Use commas, colons, parentheses, or sentence breaks instead. 
+- **Restrict em dashes**: At most 2 em dashes in the entire English review, and at most 2 破折号 in the entire Chinese review; abstracts use zero in both languages. Prefer commas, colons, sentence breaks, or a restructuring.
+- **Never open a sentence or clause with an em dash**: rewrite to lead with the subject. Em dashes are parenthetical or appositional inside a sentence, never sentence-initial. Recast "— The results exceed..." as "The results exceed...", and "——结果表明……" as "结果表明……".
 - **No LaTeX**: Describe mathematical concepts in plain English. Never use `\(...\)`, `\[...\]`, `\mathbb`, etc.
 
 ---
 
 ## 4. Section-specific quality standards
 
-### 4.1 Abstract (150–250 words for most types; up to 300 for comprehensive reviews)
+### 4.1 Abstract (150–250 words for most types; up to 300 for broad comprehensive and SOTA reviews)
 
 The abstract is the MOST READ section of any review. It must work as a standalone document — a reader should grasp the review's core contribution without ever opening the full text.
 
@@ -165,7 +203,8 @@ What is currently missing that creates the opening for this review? This can be:
 What concrete value does the reader gain? Examples of drugs entering trials, a specific methodological insight, a taxonomy, or key future directions. This is not a structural preview — it's the intellectual payoff.
 
 #### Hard constraints
-- **150–250 words** (all review types: comprehensive, SOTA, critical). Systematic reviews: structured PRISMA format, 250–380 words.
+- **150–250 words** for most types (comprehensive, SOTA, critical); up to **300 words** for broad comprehensive and SOTA reviews. Systematic reviews: structured PRISMA format, 250–380 words.
+- **Chinese abstract**: a faithful rendering of the English abstract. A 150–250 word English abstract typically renders as about 250–400 字 (broad comprehensive and SOTA about 450 字). Treat this as the normal range, not a hard cap; never pad or truncate to hit a number. Systematic reviews: 400–600 字, structured, not a literal word-for-word translation; it carries the same four beats at the density natural to Chinese.
 - **ZERO citations**: No `[N]` markers anywhere in the abstract. This is non-negotiable. Any `[` followed by a digit in the abstract is a critical error that must be fixed before delivery.
 - All abbreviations spelled out on first use
 - Self-contained — no prior knowledge of the topic assumed
@@ -231,7 +270,7 @@ models (LLMs), AI-driven scientific simulations, and DNNs with structured output
 3. "Here, we..." or "This article..." is explicit about scope
 4. The closing sentence delivers concrete value (clinical candidates, specific strategies, concrete research directions)
 5. No citations, no structure preview, no filler
-6. 100-160 words — concise and dense
+6. 150–250 words per the hard constraint above (up to 300 for broad comprehensive and SOTA reviews); the condensed examples above illustrate the four beats only, not the required length
 
 ### 4.2 Keywords (5–8)
 
@@ -291,9 +330,9 @@ The user's input topic (e.g., "RNH1 gene function") is a starting point, not the
 - [ ] Roughly balanced coverage across sections (adjust for evidence availability)
 - [ ] 8–25 citations per section (typical)
 - [ ] **Section depth check**: Every H2 has ≥2-3 substantial paragraphs. Every H3 has ≥2 paragraphs. No single-paragraph sections or sub-sections. Merge thin sections into adjacent themes or remove the heading.
-- [ ] **Every paragraph** passes the 述评结合 test (topic sentence + evidence comparison + takeaway)
+- [ ] Every paragraph advances an analytical claim, not a factual list; the topic-sentence + evidence + takeaway arc is the default shape, but paragraph length and internal structure should vary across the review
 - [ ] At least one comparison table per section with 3+ approaches
-- [ ] Technology evolution timeline figure generated when the section covers methodological development
+- [ ] Figures are optional throughout (see SKILL.md §7.8). When a figure is produced, choose a suggested type from `structure-common.md` §Figure specifications; a technology evolution timeline suits sections covering methodological development, but is not required.
 
 #### Body section quality audit
 
@@ -305,11 +344,11 @@ Scan each body section and ask:
 4. **Is context-dependence addressed?** Does the section note when conclusions depend on model system, sample size, or experimental conditions?
 5. **Does the section end with forward momentum?** Does the closing paragraph create anticipation for the next section?
 
-### 4.6 Conclusion ((Final Section, Integrated))
+### 4.6 Outlook (final section)
 
-This is the concluding synthesis of the review. Compose **2–4 flowing paragraphs** (typically 400–800 words). Do **not** use subheadings, bullet points, or enumerated categories. Do **not** split into separate "Bottlenecks" and "Future Perspectives" sections.
+This is the review's final, forward-looking synthesis. Compose **2–4 flowing paragraphs** (typically 400–800 words). Do **not** use subheadings, bullet points, or enumerated categories. Do **not** split into separate "Bottlenecks" and "Future Perspectives" sections.
 
-> This section is distinct from the "Discussion and Conclusion" of primary research papers. It functions as a synthetic overview drawn from the full scope of the review, integrating the prevailing challenges in the field with forward-looking research trajectories.
+> A review is secondary research, so this section is titled **Outlook** (Chinese: 展望), never "Conclusion"/"结论". It is not the "Discussion and Conclusion" of a primary research paper. It functions as a synthetic overview drawn from the full scope of the review, integrating the field's prevailing challenges with forward-looking research trajectories.
 
 This section weaves together current impediments to progress and future pathways for the field into a single, unified narrative. Research gaps identified throughout the body chapters are consolidated here into overarching barriers, each paired with a concrete direction for advancement.
 
@@ -323,10 +362,10 @@ This section weaves together current impediments to progress and future pathways
 **Guidance**:
 
 - Most reviews: combine into one section. This is the Nature Reviews standard.
-- Only split into separate sections if BOTH sections would be substantial (>500 words each) — rare, typically only for very broad topics.
+- Keep it as one integrated narrative. Splitting into separate "bottlenecks" and "future directions" units is not permitted, however broad the topic.
 - The gaps should already be discussed in thematic sections. This section SYNTHESIZES, not recaps.
 - If the topic has few gaps, lean toward "directions" (300-400 words). If major controversies exist, the "challenges" portion may dominate.
-- This IS the conclusion — nothing follows except references.
+- This IS the review's final section, titled Outlook — nothing follows except references.
 
 Forbidden:
 - Laundry-list rehashing of gaps from body text
@@ -388,12 +427,12 @@ Forbidden:
 - [ ] Section order and numbering identical in both language versions
 - [ ] Abstract follows the four-beat structure with all hard constraints met
 - [ ] Introduction follows the funnel structure
-- [ ] No separate Conclusion section (except systematic reviews)
-- [ ] Conclusion ((Final Section, Integrated)) is specific, actionable, and combined (not split into separate bottlenecks/future sections)
+- [ ] Final section is titled **Outlook** (展望), not "Conclusion"/"结论" (systematic reviews excepted)
+- [ ] Outlook is specific, actionable, and integrated (not split into separate bottlenecks/future sections)
 
 ### Gate 2: Evidence integrity
 - [ ] Every substantive claim is citation-backed (scan for uncited assertions)
-- [ ] **Citation accuracy**: Spot-check 20% of citations — does each cited paper genuinely support the claim it's attached to? Does paper [N] actually report the finding, mechanism, or data described in the sentence?
+- [ ] **Citation accuracy**: Verify every quantitative claim (number, percentage, fold-change, p-value, benchmark score) and spot-check at least 30% of the remaining citations — does each cited paper genuinely support the claim it's attached to? Does paper [N] actually report the finding, mechanism, or data described in the sentence?
 - [ ] All citations verified by DOI/PMID
 - [ ] No fabricated data, invented citations, or hallucinated findings
 - [ ] **Reference numbering**: Citation numbers ascend monotonically as the text progresses (sentence A `[1]` → sentence B `[2]` → sentence C `[3]`...), following first-appearance order. No `[[` double brackets remaining — all markers in single-bracket `[N]` format.
@@ -415,12 +454,15 @@ Forbidden:
 
 ### Gate 3: 述评结合 integrity
 - [ ] Scan EVERY body paragraph for paper-serializing patterns
-- [ ] Every paragraph has: topic sentence + evidence synthesis + takeaway
+- [ ] Every paragraph advances an analytical claim and integrates evidence; paragraph shape varies (uniform three-part paragraphs across the whole review are themselves a defect)
 - [ ] No paragraph reads as "Study A found X. Study B found Y. Study C found Z."
 - [ ] Author-name sentence starters: ZERO (check both languages)
 - [ ] Citations directly attached to author names: ZERO (check both languages)
 - [ ] Search for long stretches without contrast markers ("however", "in contrast", "by comparison", "whereas", "on the other hand")
 - [ ] **Citation density**: No paragraph of 4+ sentences with zero citations. No paragraph where all citations are dumped in the final sentence only (citation desert / end-only dump). Scan: count the gap between first and last citation in each paragraph — if the gap exceeds 50% of the paragraph and citations cluster in the last 2 sentences, redistribute.
+- [ ] **No structural self-description**: scan for sentences that narrate the review's own organization or writing method (e.g., "每一节都建立在前一节之上", "全文按照…展开", "each section builds on the previous one"). Delete them — they describe the scaffold, not the science.
+- [ ] **No evidence-listing lead-ins**: scan for "本综述整合如下证据：" or "this review integrates the following evidence:" before a bare list. Replace with inline synthesis.
+- [ ] **Citation mix**: tally single-paper `[N]` citations vs multi-paper groupings. If the great majority of citations are lone single papers, the draft is a catalog, not a synthesis — revisit the major claims and regroup each across ≥2–3 papers with the shared finding stated.
 
 ### Gate 4: Output integrity
 - [ ] Both .md and .docx files generated for both languages
@@ -452,6 +494,8 @@ Forbidden:
 | **Domain blindness** | Biomedical review lacks clinical context; CS review lacks efficiency analysis. | Re-read §5 domain-specific nuances. |
 | **Workflow leakage** | Review talks about preprints, database strategy, or literature counts. | Delete entire section. These are workflow steps, never review content. |
 | **False data quality criticism** | Section claims "data quality issues" but discusses preprint unreliability, not specific methodology flaws. | Replace with specific, citation-backed critique of individual papers' methods, or remove the section entirely.
+| **AI register** | Uniform paragraph shapes, mechanical "However/Furthermore" scaffolding, filler openers, promotional adjectives, evenly sized paragraphs. | Run §9 items 15–17; vary paragraph structure and length; delete filler and promotion. See `zh.md` for the Chinese AI-register blacklist.
+| **Invented methodology** | Critique asserts sample size, controls, or statistics the source never reports, inferred from journal or study type. | Drop or soften; every methodological detail must be read from the paper (§9 item 16).
 
 ---
 
@@ -466,12 +510,162 @@ After drafting the complete English review (body + abstract + title), before tra
 5. **Scan for paper-serializing.** Look for consecutive sentences each starting with a different study.
 6. **Check citation density.** For each body paragraph: count sentences vs citations. Flag any paragraph with 4+ sentences and zero citations, or where all citations cluster in the last sentence only.
 7. **Check internal bracket order.** For every multi-number bracket, verify numbers are ascending.
-8. **Read the conclusion section.** Can you draw a line from each direction back to a specific gap?
+8. **Read the Outlook section.** Can you draw a line from each direction back to a specific gap?
 9. **Count the comparison tables.** Is there at least one? Does each thematic section with 3+ approaches have its own table?
 10. **Check figure-text integration.** Is every figure referenced in the text? Does the text explain what the figure shows?
 11. **Check no prohibited content.** Scan for "preprint", "bioRxiv", "medRxiv", "预印本", "数据库检索", "database search", "文献筛选", "literature screening", "screened", "quality tier", "XX篇文献". Any matches outside the reference list → DELETE the containing section or paragraph.
 12. **Verify 述评结合 per §2**: Every body paragraph has topic sentence + evidence synthesis + takeaway. No author-name starters. No citation deserts.
-13. **Verify every number, p-value, and fold-change in the text against its source paper.** Spot-check 5 random claims.
-14. **Scan for excessive em dashes**: English: >3 total → replace. Chinese: >2 total → replace. Abstract: 0 dashes in either language.
+13. **Verify every quantitative claim against its source paper**: check every number, percentage, fold-change, p-value, and benchmark score. Additionally spot-check ≥30% of all remaining citations against the source abstract. Flag any claim whose citation does not genuinely report it.
+14. **Scan for excessive em dashes**: English >2 total → replace; Chinese 破折号 >2 total → replace; abstract 0 in either language.
+15. **Tone and register pass**: scan for promotional language ("exciting", "revolutionary", "game-changing", "breakthrough"), filler openers ("It is worth noting that", "Interestingly", "Surprisingly", "To the best of our knowledge"), unquantified intensifiers ("very", "extremely", "significantly" without a number), and contractions. Every hit is a defect under §3.5.
+16. **Constructed-methodology scan**: every sentence evaluating a study's design, sample size, controls, or statistics must trace to text actually present in the source. Delete or soften any methodological criticism inferred from the journal name, study type, or topic rather than read from the paper.
+17. **Chinese register pass (after translation)**: apply the AI-register blacklist in `zh.md` §中文 AI 腔禁用清单, and confirm the review reads as originally-written Chinese academic prose.
+18. **Narrative-review appraisal (§10)**: score the draft against the six SANRA items. Fix any item scoring ≤3/5 before delivery.
+19. **Self-citation balance**: scan the reference list for any one research group accounting for more than 20% of the total. If found, rebalance by adding diverse-group citations or prune the over-cited section. Record the balance check in the output notes.
+20. **Structural self-description & evidence-listing scan**: search the body for sentences that describe the review's own structure or method (e.g., "每一节都建立在前一节之上", "本综述整合如下证据"). Delete any found — they are scaffold narration, not content.
+21. **Citation mix scan**: tally single-paper `[N]` citations vs multi-paper groupings. If almost every citation is a lone `[N]`, the draft is a paper log, not a synthesis; revisit the major claims and regroup them across ≥2–3 papers, stating the shared finding those papers report.
 
 If any audit item fails, fix it before proceeding to translation.
+
+---
+
+## 10. Narrative-review quality appraisal (SANRA)
+
+For Comprehensive/Narrative, SOTA, and Critical/Perspective reviews, appraise the finished draft against the Scale for the Assessment of Narrative Review Articles (SANRA), the accepted instrument for appraising narrative reviews. Score each item 0–5; treat ≥4 as a pass and fix anything at ≤3.
+
+| # | SANRA item | What a passing draft shows |
+|---|-----------|-----------------------------|
+| 1 | Justification of the article's importance for the readership | The Introduction states why the topic matters now and for whom |
+| 2 | Statement of concrete aims or questions | The Introduction states explicit aims or questions, not a vague scope |
+| 3 | Description of the literature search | Search scope is documented in `search_queries.md` and the output notes (see note) |
+| 4 | Referencing | Claims trace to cited sources; each citation supports the claim it is attached to |
+| 5 | Scientific reasoning | Arguments are evidence-based, conflicting evidence is weighed, conclusions are proportionate |
+| 6 | Appropriate presentation of data | Comparison tables and any figures are labelled, referenced, and interpreted in the text |
+
+**Note on item 3.** This skill deliberately keeps search methodology out of the review body (§Gate 2.5). SANRA item 3 is therefore satisfied *internally*, through the search log and output notes, not through a methods paragraph in the prose. If a target venue explicitly requires a search paragraph, add a single Methods note as a venue-specific exception and do not generalise it.
+
+**Purpose.** SANRA guards against the most common failure of machine-assisted narrative reviews: a fluent but under-justified synthesis. Items 1, 2, and 5 are the discriminating ones. A draft that scores well on referencing but poorly on justification and reasoning is a catalogue with citations, not a review.
+
+---
+
+## 11. Sentence and paragraph rhythm (machine-gated)
+
+Rhythm decides whether a specialist skims the review or abandons it. Everything in this section is measurable, and every rule here is enforced by `scripts/validate_review.py` (see §11.8). Thresholds apply to body prose: the abstract, tables, bullets, and headings are excluded.
+
+### 11.1 Sentence length budget
+
+The sentence has a ceiling, and long sentences have to earn their neighbours. Two languages, two scales:
+
+| | Long sentence | Must split | Short reset sentence |
+|---|---|---|---|
+| English | >35 words | >50 words | ≤15 words |
+| Chinese | >70 字 | >100 字 | ≤25 字 |
+
+1. **A sentence above the "must split" threshold is split** at a natural clause boundary. Do not shorten it by deleting content: promote its second half into its own sentence and give that sentence whatever subject it needs.
+2. **Every long sentence is answered by a short one.** Among the two sentences that follow a long sentence, one must sit at or below the short reset threshold. A paragraph boundary counts as that reset, so the rule never fires on a closing sentence.
+3. **Chinese clause load**: no sentence carries six or more commas（，）. A sentence needing six commas needs a full stop.
+4. **Do not flatten everything to one length.** These rules set a ceiling and demand contrast, not uniformity; a review written entirely in medium sentences drones as badly as one written entirely in long ones.
+
+The Chinese thresholds are calibrated against delivered output that averaged 61 字 per sentence with a 90th percentile of 115 字 and a maximum of 316 字. Sentences that long are not readable however sound their content is.
+
+### 11.2 One paragraph, one argument line
+
+- A paragraph carries **one** argument line, supported by **3 to 5 studies** whose relationships are stated explicitly: they converge, they conflict, or one delimits the other. "X and Y reach the same conclusion by different routes; Z establishes its boundary."
+- **Never one study per sentence.** "A 做了 X [1]。B 做了 Y [2]。C 做了 Z [3]。" is a log, not an argument. Group the studies inside a claim.
+- **Size**: Chinese ≤350 字, English ≤180 words. At most 20% of paragraphs may exceed this soft cap, and **no paragraph exceeds** 525 字 / 270 words.
+- **Vary paragraph length.** Uniform blocks are the strongest single signal of machine authorship.
+
+### 11.3 Superlative budget
+
+Evaluative superlatives (`most compelling`, `strongest`, `cleanest`, `best`; 最强、最优、最为关键、最有教益) are spent, not sprinkled: **at most one per section**, reserved for the finding on which the review's own argument turns. Everything else takes a comparative form: "a more tightly controlled result", "相比之下", "一项受控程度更高的结果". Temporal and literal-measure uses (最近、最新、最终、最大、最小) are not superlatives and are not counted.
+
+### 11.4 Openers: lead with the object, not the verdict
+
+Banned openers include: `It is worth noting that`, `That is precisely`, `The result is`, `The sobering counterweight is`, `It is easy to miss`, `Importantly`, `Notably`; 值得注意的是、由此可见、综上所述、还有一个……值得强调、一个清醒的反证来自、最有教益的是、换句话说、可以说的是。
+
+**Quota**: within any window of four consecutive paragraphs, at most one opens with commentary, a pronoun (这、该、其、此), or a connective (因此、然而、此外). Aim to open more than half of all paragraphs with the concrete finding, molecule, method, or measurement at issue.
+
+### 11.5 Agency before nominalization
+
+- **English**: prefer an agent plus a verb. "Most groups adopted that objective" over "The field has converged on that objective"; "this screen showed" over "the result is". Noun phrases carrying the action (`conducted an analysis of`, `performed an evaluation of`) are recast as their verbs.
+- **Chinese**: avoid calqued cleft constructions such as 正是……带来了…… and ……的是…… chains that postpone the verb to the end. Write 单细胞测量推动了这一重新定位, not 带来这一重新定位的正是单细胞测量.
+
+### 11.6 Commentary discipline
+
+A finding earns an editorial comment only when that comment changes the direction of the argument; everything else is stated as evidence and left to stand alone. **Test**: delete the sentence. If the paragraph's claim survives unchanged, the sentence was decoration. As a corollary, judgement must not accumulate without support: no more than 30% of claim-length sentences may carry no citation.
+
+### 11.7 Parenthetical load
+
+Every inline gloss interrupts reading, so the Chinese expansion form 中文全称（English full name，ABBR） is bounded on two sides:
+
+- **Document scope**: expand each abbreviation **once in the whole review**, on first use. Every later use carries the abbreviation alone, backed by the abbreviation table. Re-expanding per section is what produced the worst readability failure observed in delivered output: one paragraph carrying six parenthetical glosses, with several sentences above 130 字.
+- **Density**: at most one parenthetical gloss per sentence and two per paragraph. The excess belongs in the abbreviation table or in a preceding qualifier.
+
+### 11.8 Enforcement
+
+| Failure | Class | Code |
+|---------|-------|------|
+| Sentence above the must-split threshold | error | RG-302 |
+| Long sentence followed by two more long sentences | error | RG-302 |
+| Chinese sentence with six or more commas | error | RG-302 |
+| Paragraph above the hard size limit | error | RG-302 |
+| More than one parenthetical gloss per sentence, two per paragraph | error | RG-302 |
+| Abbreviation missing its English full name on first use | error | RG-300 |
+| Share of paragraphs above the soft cap exceeds 20% | advisory | RG-303 |
+| Superlative budget exceeded within a section | advisory | RG-303 |
+| Too many consecutive commentary, pronoun, or connective openers | advisory | RG-303 |
+| Share of uncited claim sentences exceeds 30% | advisory | RG-303 |
+| English nominalized verb phrases | advisory | RG-303 |
+
+Errors block delivery: `validate_review.py` exits 1 and the review cannot ship until they are fixed. Advisories print as `WARNING [RG-303]` and do not block. They separate a compliant draft from a good one, so resolve rather than waive them.
+
+---
+
+## 12. List notation (machine-gated)
+
+A list is a structure, not a character. The only list marker that may be typed into `review_EN.md` or `review_CN.md` is the Markdown one: a hyphen, one space, then the item text on the same line.
+
+### 12.1 The canonical marker
+
+```
+- Resistant states usually pre-exist treatment and are selected by it.
+```
+
+Hard-coded bullet characters (`•`, `·`, `▪`, `◦`, `●`, `○`, `■`, `□`) are forbidden anywhere in the draft.
+
+### 12.2 Why the glyph breaks the paragraph
+
+A typed glyph is ordinary text. The docx exporter sees a body paragraph, not a list entry, so it applies the body indent: the first line gets the two-character indent, and Word wraps every continuation line back to the left margin. The reader sees a dot, then a break, then text hanging under the margin instead of aligned under the item. The effect is worst in the Key points block, where items are long enough to wrap, and it is exactly the defect that made delivered Key points look like broken lines.
+
+A Markdown marker is rendered as a Word bullet list: the glyph is supplied by the list style, and the direct hanging indent keeps every wrapped line aligned under the text. No manual character, no manual tab, no manual indent.
+
+### 12.3 Key points block
+
+The Key points block has no heading of its own; it sits between the Keywords line and the first `##` heading, and it carries the notation rules plus:
+
+- **Font (Chinese doc)**: the Key points render in 楷体 (KaiTi), not the body face 宋体. The exporter sets this automatically from the `lang` flag, so the draft never names a font. The change is purely visual — it marks the block as an executive summary distinct from the running prose. The English doc keeps Times New Roman throughout.
+
+| Rule | Limit |
+|------|-------|
+| Items | 4 to 6 |
+| Sentences per item | 2 |
+| Length per item | 30 words (EN), 60 字 (CN) |
+| Citations | zero, as in the abstract |
+
+One item states one main message. An item that needs three sentences is a paragraph that belongs in the Outlook, not a Key point.
+
+### 12.4 Continuation lines
+
+If an item must wrap in the source, indent the continuation. The exporter folds it into the same bullet; an unindented line becomes a new paragraph.
+
+### 12.5 Enforcement
+
+| Failure | Class | Code |
+|---------|-------|------|
+| Hard-coded bullet glyph anywhere in the draft | error | RG-304 |
+| Key points item not written as a Markdown list item | error | RG-304 |
+| Key points outside 4 to 6 items | error | RG-304 |
+| Key points item carrying a citation | error | RG-304 |
+| Key points item above 2 sentences, 30 words (EN), or 60 字 (CN) | error | RG-304 |
+
+`validate_review.py` reports all of these as RG-304 (exit 1). The generator renders the markers, so a draft that passes renders correctly with no further action.

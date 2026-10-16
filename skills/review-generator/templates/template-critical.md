@@ -6,8 +6,13 @@ For topics where the goal is to challenge paradigms, propose frameworks, or reso
 
 ```
 Title
-Abstract (unstructured, 150–250 words — see ../standards/writing-quality.md §4.1)
+Abstract (unstructured, 150–250 words; up to 300 for broad topics — see ../standards/writing-quality.md §4.1)
   → State existing paradigm, its problems, and proposed alternative
+
+Keywords (5–8)
+[Abbreviations table — if ≥10 abbreviations]
+
+Key Points (4-6 bullets, recommended; see ../templates/structure-common.md §Key points and Boxes)
 
 Introduction (flowing prose, NO sub-headings)
   → The current consensus and its origins
@@ -32,12 +37,12 @@ Alternative frameworks
 Implications
   → For research, methods, translation if the new framework is correct
 
-A path forward (final section, 1-2 flowing paragraphs — no sub-headings)
+Outlook (final section, 2-4 flowing paragraphs — no sub-headings; never "Conclusion")
   → Key experiments to discriminate between frameworks
   → Methodological improvements needed
-  → Concluding statement (vision for the field after resolution)
+  → Closing statement (vision for the field after resolution)
 
-References (40–80 typical)
+References (60–100 typical)
 ```
 
 ## Drafting order
@@ -48,6 +53,6 @@ Draft the argument's core evidence sections first, then the framing:
 2. **Cracks in the foundation** (contradictory evidence — the heart of the argument)
 3. **Alternative frameworks** (proposed resolution)
 4. **Implications** (what follows if the new framework is correct)
-5. **A path forward**
+5. **Outlook** (final section — titled 展望 in Chinese)
 6. **Introduction** (written last — it must set up the tension the body resolves)
-7. **Final assembly**: Title → Abstract → Keywords (5–8) → [Abbreviations] → Introduction → Case for paradigm → Cracks → Alternatives → Implications → Path forward → References
+7. **Final assembly**: Title → Abstract → Keywords (5–8) → [Abbreviations] → Introduction → Case for paradigm → Cracks → Alternatives → Implications → Outlook → References

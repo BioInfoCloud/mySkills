@@ -8,11 +8,11 @@ Select one of four types. The type determines the structural template, the depth
 
 | Signal from user / topic | Review type | Template | Reference target |
 |-------------------------|-------------|----------|-----------------|
-| Default — "review on X", "overview", "survey", "综述" | **Comprehensive/Narrative** | `template-narrative.md` | 60-150 refs; 8,000-12,000 EN words |
-| Biomedical or cross domain (including AI+biomedical) — **ALWAYS use Narrative** regardless of method content | **Comprehensive/Narrative** | `template-narrative.md` | 60-150 refs; 8,000-12,000 EN words |
+| Default — "review on X", "overview", "survey", "综述" | **Comprehensive/Narrative** | `template-narrative.md` | 100-200 refs; 8,000-12,000 EN words |
+| Biomedical or cross domain (including AI+biomedical) — **default Narrative**; SOTA allowed when the cross-domain topic is method-heavy and the target venue is a CS/AI conference | **Comprehensive/Narrative** (default) or **SOTA** (method-heavy + CS/AI venue) | `template-narrative.md` or `template-sota.md` | 100-200 refs (Narrative) / 100-250 refs (SOTA); 8,000-12,000 EN words |
 | Pure CS/AI method-heavy survey, "comprehensive survey", "SOTA" (cs_ai domain only) | **State-of-the-Art (SOTA)** | `template-sota.md` | 100-250 refs; 10,000-15,000+ EN words |
 | "systematic review", "meta-analysis", mentions PRISMA | **Systematic Review** | `template-systematic.md` | Variable, PRISMA-compliant |
-| Active controversy, "perspective", "rethinking", challenges paradigm | **Critical / Perspective** | `template-critical.md` | 40-80 refs; 5,000-8,000 EN words |
+| Active controversy, "perspective", "rethinking", challenges paradigm | **Critical / Perspective** | `template-critical.md` | 60-100 refs; 5,000-8,000 EN words |
 
 All four types produce **bilingual (English + Chinese) outputs** with structurally identical sections, matching reference numbers, and aligned terminology.
 
@@ -24,14 +24,13 @@ All four types produce **bilingual (English + Chinese) outputs** with structural
 2. **述评结合**: Every paragraph that cites literature must also compare, contrast, and evaluate. See `../standards/writing-quality.md` §2 for the full rule set.
 3. **Comparison tables**: At least one per review; one per thematic section with 3+ approaches (tables are text-based and always feasible). Figures are optional (see §Figure specifications).
 4. **Gap-grounded future perspectives**: Every proposed direction traces to a specific gap in the body.
-5. **No separate conclusion section**: The review ends with the final section specified in each template.
+5. **Outlook as the final section**: The review ends with a forward-looking synthesis titled **Outlook** (Chinese: 展望). A review must never carry a "Conclusion"/"结论" heading, because that framing implies the article reports original findings. Systematic reviews are the sole exception, where PRISMA mandates a Conclusions section.
 6. **Abbreviations table** when ≥10 abbreviations are used.
-7. **Method comparison tables**: At least one per review; one per thematic section with 3+ approaches.
 
 ### Nature Reviews-style conventions
-- **"At a glance" value**: Core message accessible from abstract, figures, and headings alone.
+- **"At a glance" value**: Core message accessible from the abstract and headings alone, and from figures when figures exist.
 - **Accessible to non-specialists**: Introduction understandable by any scientist. Jargon defined on first use.
-- **Figures as narrative anchors**: The central figure carries the review's core argument visually.
+- **Figures reinforce the narrative (when available)**: A well-designed central figure can carry the review's core argument visually. The automated pipeline is text-first and normally produces no figures (see §Figure specifications); this does not lower the required argumentative standard. The core message must be recoverable from the abstract, headings, and comparison tables alone.
 - **Active voice, first-person plural**: Use "We" to establish authorial voice.
 - **Section openings**: Every section begins by explaining what it covers and why it matters for the overall argument.
 
@@ -44,6 +43,7 @@ The templates are **structural guidance, not rigid prescriptions**. Adapt them t
 - **Introduction**: Written as **flowing paragraphs**, NOT numbered sub-sections. The content elements (context, gap, scope) should be woven into continuous prose, not separated by sub-headings.
 - **Thematic sections**: **Derived from deep analysis, not pre-planned.** The clustering results (5 dimensions) reveal the literature's natural organization. Determine themes AFTER deep analysis, not before literature search. Typically 3–6 themes, each with 8–25 citations.
 - **Sub-headings within themes**: Use when a theme has distinct sub-topics that benefit from explicit organization. A theme with one clear narrative thread may not need sub-headings at all. A theme covering multiple distinct methods or disease contexts may need several.
+- **Body H2 organization is content-driven and optional**: The sections between the Introduction and the Outlook may be divided into H2 headings as the content's natural structure dictates; there is no preset count. A theme may be a single continuous H2 section, or the body may use several H2 sections as the argument requires. Every H2 section must carry substantial content (≥2–3 substantial paragraphs of synthesized evidence) — never let an H2 head a thin, single-paragraph block. If a heading's content is too small to sustain it, fold it into the adjacent section's prose.
 - **Section ordering**: Organize themes in a logical progression — foundational → applied, molecular → clinical, simple → complex, classical → emerging. Choose the order that best serves the narrative arc.
 
 ### Minimum content rule
@@ -57,6 +57,44 @@ Every section heading must earn its place through content, not outline aesthetic
 **Principle**: A heading exists to organize content, not to create the illusion of structure. If removing a heading doesn't harm readability, remove it.
 
 ---
+
+## Key points and Boxes
+
+**Key points** are a 4 to 6 bullet executive summary placed after Keywords (or Abbreviations) and before the Introduction. They give the reader the review's main messages in one screen. Mandatory for Comprehensive/Narrative and SOTA; recommended for Critical/Perspective; not used in Systematic reviews (the PRISMA structured abstract replaces this function).
+
+**Boxes** are 0 to 3 in-depth sidebars, each 200 to 600 words, that expand a focused subtopic without breaking the main narrative. Optional for all four review types. Each Box is referenced in the body text via "Box 1", "Box 2", and so on.
+
+### Key points rules
+- 4 to 6 bullets, each 1 to 2 sentences, no more than 30 words per bullet; the Chinese block caps each item at 60 字
+- Cover the review's most important findings, not generic topics
+- Concrete: name specific mechanisms, methods, evidence, or gaps
+- No citations in Key points (same rule as the abstract: zero `[N]`)
+- No "we discuss" preambles; lead with the takeaway
+
+### Key points notation
+Every item is a Markdown list item: a hyphen, one space, then the takeaway on the same line. Do not type the glyph `•` or any other bullet character.
+
+```markdown
+- Single-cell RNA-seq shifts the unit of drug discovery from the gene to the cell state.
+- Resistant states usually pre-exist treatment and are selected by it.
+- Lineage tracing separates relapse from residual disease.
+```
+
+The Markdown marker is the contract. A hand-typed glyph is body text to the docx exporter, which then indents the first line and wraps every continuation line back to the margin, so the item reads as a broken line instead of a list entry. `validate_review.py` reports a hard-coded glyph as RG-304. Boxes and any other list in the review follow the same notation.
+
+### Box rules
+- 0 to 3 Boxes per review; cite each in the body
+- Each Box has a short title, a 200 to 600 word body, and 1 to 3 references if needed
+- Use Boxes for a glossary, technical method summaries, focused clinical or disease context, or controversies that are not central to the main argument
+- Format the Box body as continuous prose; sub-headings and bullet points are allowed within a Box
+- Place the Box either at the point of first reference or at the end of the review before references; either way, the body text must use the form (Box 1)
+
+### Box format example
+```
+Box 1 | Title.
+
+Body text. Subheadings allowed. References listed at the end of the Box if any [1,2].
+```
 
 ## Comparison table specifications
 
@@ -91,7 +129,7 @@ Figure design rules (if creating figures):
 - Figures should be conceptually clean, colorblind-safe, and publication-ready
 - Each figure has a numbered caption in both English and Chinese
 - Every figure is referenced and discussed in the body text
-- Figures should carry the review's core argument visually — a reader should grasp the main message from figures alone
+- When a central figure is produced, it should reinforce the review's core argument rather than merely decorate it
 
 ---
 
@@ -103,7 +141,7 @@ Figure design rules (if creating figures):
 - Table and figure numbers match; captions are translated, not transcribed verbatim
 - Abbreviation format (Chinese, first occurrence): 中文全称（English full name，缩写）
 - Both versions contain the same number of comparison tables; if figures exist, both versions have matching figure numbers and captions
-- Both versions use the same final section structure; neither has a separate Conclusion section (except systematic reviews)
+- Both versions use the same final section structure and the same Outlook (展望) heading; neither carries a Conclusion heading (systematic reviews excepted)
 
 ---
 
@@ -116,22 +154,22 @@ For a standard full-length review:
 | Introduction | 10–15% |
 | Background / Preliminaries (if present) | 10–15% |
 | Thematic body sections (total) | 50–60% |
-| Final section | 10–15% |
+| Outlook (final section) | 10–15% |
 
 Adjust for shorter/longer reviews. SOTA reviews may allocate 60%+ to method categories. Critical reviews may allocate more to the argument sections.
 
 Recommended targets:
-- **Comprehensive review**: 8,000–12,000 English words; 60–150 references
+- **Comprehensive review**: 8,000–12,000 English words; 100–200 references
 - **SOTA review**: 10,000–15,000+ words; 100–250 references
 - **Systematic review**: variable; typically 6,000–10,000 words + appendices
-- **Critical/Perspective review**: 5,000–8,000 words; 40–80 references
+- **Critical/Perspective review**: 5,000–8,000 words; 60–100 references
 
 ---
 
 ## What NOT to include (universal)
 
 1. **No numbered sub-headings in the Introduction** — write as flowing prose.
-2. **No separate "Conclusion" section** (except in systematic reviews). The review ends with the final section defined in each template.
+2. **No "Conclusion"/"结论" heading** (systematic reviews excepted). Title the final section **Outlook** (展望); nothing follows it except references.
 3. **No placeholder reference ranges** like [21-157]. Every reference number maps to a real paper.
 4. **No structural descriptions in the abstract** ("This review is organized as follows...").
 5. **No empty filler sentences** ("This field has broad development prospects", "More research is needed").
